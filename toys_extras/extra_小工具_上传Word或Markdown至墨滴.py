@@ -1,9 +1,12 @@
 import os
+from toys_utils import ToyError
 from toys_logger import logger
 from toys_extras.articles import Articles
 from playwright.sync_api import Page
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
+# 更新日志
+# 1.0.1 修复选择墨滴文件夹失败的问题
 
 
 class Toy(Articles):
@@ -17,6 +20,24 @@ class Toy(Articles):
         self.page.locator("#nice-menu-theme").click()
         self.page.locator("[data-node-key=collection] div").click()
         self.page.locator(".banner-card", has_text=theme).get_by_text("使 用").click()
+
+    def choose_catalog(self, catalog_name: str, depth: int = 1) -> None:
+        if depth == 5:
+            raise ToyError("选择墨滴文件夹失败，请确认文件夹名称是否正确")
+        try:
+            catalog_btn = self.page.locator(".catalog-btn")
+            article_list = self.page.locator(".nice-article-sidebar-list-item-container")
+            catalog_list = self.page.locator(".catalog-sidebar-list-item-container")
+            article_list.or_(catalog_list).last.wait_for()
+            if article_list.count():
+                if catalog_btn.count() and catalog_btn.text_content() != catalog_name:
+                    catalog_btn.click(timeout=3000)
+                    self.page.locator(".catalog-name", has_text=catalog_name).click(timeout=3000)
+            elif catalog_list.count():
+                self.page.locator(".catalog-name", has_text=catalog_name).click(timeout=3000)
+        except Exception as e:
+            logger.exception(f"Error: {e}")
+            self.choose_catalog(catalog_name, depth+1)
 
     def play(self):
         theme = self.config.get("扩展", "墨滴主题")
@@ -39,14 +60,7 @@ class Toy(Articles):
             try:
                 file = line[3]
                 title = line[0]
-                catalog_btn = self.page.locator(".catalog-btn")
-                new_catalog_btn = self.page.get_by_role("button", name="新增文件夹")
-                catalog_btn.or_(new_catalog_btn).wait_for()
-                if catalog_btn.count() and catalog_btn.text_content() != catalog_name:
-                    catalog_btn.click()
-                    self.page.locator(".catalog-name", has_text=catalog_name).click()
-                elif new_catalog_btn.count():
-                    self.page.locator(".catalog-name", has_text=catalog_name).click()
+                self.choose_catalog(catalog_name)
                 self.page.locator("button.add-btn").click()
                 self.page.get_by_placeholder("请输入标题").fill(title)
                 self.page.get_by_role("button", name="新 增").click()
