@@ -4,10 +4,10 @@ from toys_logger import logger
 from toys_extras.articles import Articles
 from playwright.sync_api import Page
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 # 更新日志
 # 1.0.1 修复选择墨滴文件夹失败的问题
-
+# 1.0.2 同步墨滴网站改版，修复上传失败的问题
 
 class Toy(Articles):
 
@@ -75,11 +75,12 @@ class Toy(Articles):
                 self.page.get_by_text("导入文件成功").wait_for()
                 try:
                     self.page.locator("#nice-md-editor").click(button="right")
-                    self.page.locator('#nice-editor-menu').get_by_text('格式化文档').click()
+                    self.page.locator('.nice-editor-menu').get_by_text('格式化文档').click()
                     self.page.get_by_text("自动保存成功", exact=True).wait_for(timeout=5000)
                 except Exception as e:
                     self.result_table_view[self.result_table_view.index(line)][1] = "可能失败"
                     self.result_table_view[self.result_table_view.index(line)][2] = "未等待自动保存成功提示"
+                    logger.exception(f"上传Word或Markdown至墨滴失败: {e}")
                     continue
                 self.result_table_view[self.result_table_view.index(line)][1] = "已处理"
             except Exception as e:
