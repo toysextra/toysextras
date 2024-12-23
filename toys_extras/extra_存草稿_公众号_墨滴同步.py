@@ -5,7 +5,7 @@ from playwright.sync_api import Page
 from toys_logger import logger
 from toys_utils import ToyError
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class Toy(BaseWeb):
