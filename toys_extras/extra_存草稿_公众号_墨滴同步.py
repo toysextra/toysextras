@@ -19,7 +19,7 @@ class Toy(BaseWeb):
     def handle_request(route):
         response = route.fetch()
         text = response.text()
-        text = text.replace("const e=nD();", "const e=nD();window.WXCOPY=e;return;")
+        text = text.replace("const e=CD();", "const e=CD();window.WXCOPY=e;return;")
         route.fulfill(body=text, status=200)
 
     def choose_catalog(self, catalog_name: str, depth: int = 1) -> None:
