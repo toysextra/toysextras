@@ -4,7 +4,7 @@ from toys_extras.base import Base
 import pandas as pd
 from toys_logger import logger
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 class Toy(Base):
 
@@ -14,7 +14,7 @@ class Toy(Base):
     def __init__(self):
         super().__init__()
         self.result_table_view: list = [['文件名', '状态', "txt文件"]]
-        self.invalid_chars = r'[\\/:*?"<>|.]'
+        self.invalid_chars = r'[\\/:*?"<>|]'
 
     def play(self):
         for file in self.files:
