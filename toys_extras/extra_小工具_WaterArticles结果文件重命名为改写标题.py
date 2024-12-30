@@ -30,7 +30,7 @@ class Toy(Base):
                 with open(file, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
                     content = re.sub(self.invalid_chars, '_', content)
-                file_name = os.path.basename(file).split('.')[0].replace('改写_标题_', '')
+                file_name = os.path.basename(file).rsplit('.', maxsplit=1)[0].replace('改写_标题_', '')
                 txt_status, markdown_status, word_status = '失败', '失败', '失败'
                 file_path = os.path.dirname(file)
                 txt_file_name = file_name
