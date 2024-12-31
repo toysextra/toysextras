@@ -17,9 +17,13 @@ class Toy(Base):
         file_name = file_name + '.' + file_type
         new_name = new_name + '.' + file_type
         if os.path.exists(os.path.join(path, file_name)):
-            os.rename(os.path.join(path, file_name), os.path.join(path, new_name))
+            try:
+                os.rename(os.path.join(path, file_name), os.path.join(path, new_name))
+            except Exception as e:
+                return False
             return True
         return False
+
 
     def play(self):
         txt汇总目录 = self.config.get("扩展", "txt汇总目录")
