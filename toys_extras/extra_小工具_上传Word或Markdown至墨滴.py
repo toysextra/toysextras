@@ -4,10 +4,12 @@ from toys_logger import logger
 from toys_extras.articles import Articles
 from playwright.sync_api import Page
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 # 更新日志
 # 1.0.1 修复选择墨滴文件夹失败的问题
 # 1.0.2 同步墨滴网站改版，修复上传失败的问题
+# 1.0.3 切换文件夹方法优化
+
 
 class Toy(Articles):
 
@@ -22,19 +24,26 @@ class Toy(Articles):
         self.page.locator(".banner-card", has_text=theme).get_by_text("使 用").click()
 
     def choose_catalog(self, catalog_name: str, depth: int = 1) -> None:
+        print(depth)
         if depth == 5:
             raise ToyError("选择墨滴文件夹失败，请确认文件夹名称是否正确")
         try:
             catalog_btn = self.page.locator(".catalog-btn")
-            article_list = self.page.locator(".nice-article-sidebar-list-item-container")
+            item_list = self.page.locator(".ant-list")
             catalog_list = self.page.locator(".catalog-sidebar-list-item-container")
-            article_list.or_(catalog_list).last.wait_for()
-            if article_list.count():
-                if catalog_btn.count() and catalog_btn.text_content() != catalog_name:
-                    catalog_btn.click(timeout=3000)
-                    self.page.locator(".catalog-name", has_text=catalog_name).click(timeout=3000)
-            elif catalog_list.count():
-                self.page.locator(".catalog-name", has_text=catalog_name).click(timeout=3000)
+            item_list.wait_for(state="attached")
+            try:
+                item_list.locator(".ant-list-items").wait_for(timeout=3000)
+            except Exception:
+                pass
+            if catalog_list.count():
+                self.page.locator(".catalog-name", has_text=catalog_name).evaluate("element => element.click()")
+                self.random_wait(1000, 1500)
+            elif catalog_btn.text_content() != catalog_name:
+                catalog_btn.click(timeout=3000)
+                self.random_wait(1000, 1500)
+                self.page.locator(".catalog-name", has_text=catalog_name).evaluate("element => element.click()")
+                self.random_wait(1000, 1500)
         except Exception as e:
             logger.exception(f"Error: {e}")
             self.choose_catalog(catalog_name, depth+1)
@@ -84,10 +93,11 @@ class Toy(Articles):
                     continue
                 self.result_table_view[self.result_table_view.index(line)][1] = "已处理"
             except Exception as e:
-                logger.exception(f"Error: {e}")
                 if self.page.get_by_role("button", name="升级会员").is_visible(timeout=5000):
                     no_space = True
                     e = "墨滴空间不足"
+                else:
+                    logger.exception(f"Error: {e}")
                 self.result_table_view[self.result_table_view.index(line)][1] = "失败"
                 self.result_table_view[self.result_table_view.index(line)][2] = str(e)
         self.page.close()
