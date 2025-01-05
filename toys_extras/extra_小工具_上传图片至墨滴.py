@@ -4,7 +4,7 @@ from toys_extras.base import Base
 from toys_utils import image_size
 from toys_logger import logger
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class Toy(Base):
@@ -17,7 +17,7 @@ class Toy(Base):
 
     def upload_image(self, file_path: str) -> str:
         headers = {
-            'Authorization': 'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJOall3T1RjPSIsImlzcyI6IjkwYjlhNjNjODFjYzYzNTg4NDg2IiwiaWF0IjoxNzMyNTA3MDE2LCJhdWQiOiJtZG5pY2UtYXBpIiwiZXhwIjoxNzM1MDk5MDE2LCJuYmYiOjE3MzI1MDcwMTZ9.YgsvZuKIvPUX91IOf5WIKaCsGdWT-irIQu8YdZRz-uk',
+            'Authorization': self.token_list[self.current_token_index],
             'Pragma': 'no-cache',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0'
         }
@@ -67,7 +67,3 @@ class Toy(Base):
                     f.write(url + "\n")
                 if stop_flag:
                     break
-
-
-
-
