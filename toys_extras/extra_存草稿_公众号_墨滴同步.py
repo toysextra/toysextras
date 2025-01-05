@@ -1,11 +1,11 @@
-import time
-
 from toys_extras.base_web import BaseWeb
 from playwright.sync_api import Page
 from toys_logger import logger
 from toys_utils import ToyError
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
+
+# 修复微信公众号内容复制失败的问题
 
 
 class Toy(BaseWeb):
@@ -23,19 +23,26 @@ class Toy(BaseWeb):
         route.fulfill(body=text, status=200)
 
     def choose_catalog(self, catalog_name: str, depth: int = 1) -> None:
+        print(depth)
         if depth == 5:
             raise ToyError("选择墨滴文件夹失败，请确认文件夹名称是否正确")
         try:
             catalog_btn = self.page.locator(".catalog-btn")
-            article_list = self.page.locator(".nice-article-sidebar-list-item-container")
+            item_list = self.page.locator(".ant-list")
             catalog_list = self.page.locator(".catalog-sidebar-list-item-container")
-            article_list.or_(catalog_list).last.wait_for()
-            if article_list.count():
-                if catalog_btn.count() and catalog_btn.text_content() != catalog_name:
-                    catalog_btn.click(timeout=3000)
-                    self.page.locator(".catalog-name", has_text=catalog_name).click(timeout=3000)
-            elif catalog_list.count():
-                self.page.locator(".catalog-name", has_text=catalog_name).click(timeout=3000)
+            item_list.wait_for(state="attached")
+            try:
+                item_list.locator(".ant-list-items").wait_for(timeout=3000)
+            except Exception:
+                pass
+            if catalog_list.count():
+                self.page.locator(".catalog-name", has_text=catalog_name).evaluate("element => element.click()")
+                self.random_wait(1000, 1500)
+            elif catalog_btn.text_content() != catalog_name:
+                catalog_btn.click(timeout=3000)
+                self.random_wait(1000, 1500)
+                self.page.locator(".catalog-name", has_text=catalog_name).evaluate("element => element.click()")
+                self.random_wait(1000, 1500)
         except Exception as e:
             logger.exception(f"Error: {e}")
             self.choose_catalog(catalog_name, depth+1)
@@ -101,12 +108,12 @@ class Toy(BaseWeb):
                     we_chat_page.get_by_text("文章", exact=True).locator("visible=true").click()
                 popup_page = popup_info.value
                 popup_page.get_by_placeholder("请在这里输入标题").fill(title)
-                popup_page.locator("div[contenteditable=true]", has_text="从这里开始写正文").evaluate(
+                popup_page.locator(".editor_content_placeholder", has_text="从这里开始写正文").evaluate(
                     "element => element.innerHTML = `{}`".format(content)
                 )
                 self.random_wait()
                 popup_page.get_by_role("button", name="保存为草稿").click()
-                popup_page.get_by_text("已保存", exact=True).wait_for(timeout=3000)
+                popup_page.get_by_text("已保存", exact=True).locator("visible=true").wait_for(timeout=3000)
                 self.random_wait()
                 popup_page.close()
                 if need_delete:
