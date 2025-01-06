@@ -3,7 +3,7 @@ from playwright.sync_api import Page
 from toys_logger import logger
 import os
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class Toy(BaseWeb):
@@ -46,7 +46,7 @@ class Toy(BaseWeb):
                 self.random_wait()
                 popup.get_by_role("button", name="保存为草稿").click()
                 try:
-                    popup.locator("#js_save_success").get_by_text("已保存", exact=True).wait_for(state="attached", timeout=5000)
+                    popup.locator("#js_save_success").get_by_text("已保存", exact=True).locator("visible=true").wait_for(state="attached", timeout=5000)
                 except Exception as e:
                     logger.exception(e)
                     line[1] = "可能失败,请手动检查"
