@@ -144,10 +144,7 @@ class Toy(Base):
                         self.result_table_view.append([file, "失败", f"公众号登录失败:{self.access_token}"])
                         continue
                     images = natsorted(os.listdir(dir_name))
-                    image_urls = ["http://mmbiz.qpic.cn/mmbiz_jpg/hX6GI1tia2Dvia3BxvicXicuxrz5857SxRtHH2icz6VW9MVn2jfTwpZfldV27K8vuKEJF5uzllfd9PD6ncxtHdA7K5Q/0?from=appmsg",
-                                  "http://mmbiz.qpic.cn/mmbiz_jpg/hX6GI1tia2Dvia3BxvicXicuxrz5857SxRtHARbh2ic8adibdueLT8NIjBM4dM61tZ9TllHbaLicTeoKHbHuicTqWBlxsA/0?from=appmsg",
-                                  "http://mmbiz.qpic.cn/mmbiz_jpg/hX6GI1tia2Dvia3BxvicXicuxrz5857SxRtHGSqUavArSyEA1iaNbzrkvggkYPU6rg9SeEDq770Ceye9GZc8aqOCL5A/0?from=appmsg"]
-
+                    image_urls = []
                     for f in images:
                         if len(image_urls) >= 插图数量:
                             break
@@ -158,8 +155,8 @@ class Toy(Base):
                                     continue
                             if thumb == "":
                                 thumb = os.path.join(dir_name, f)
-                            # url = wechat_api.upload_article_image(os.path.join(dir_name, f))
-                            # image_urls.append(url)
+                            url = wechat_api.upload_article_image(os.path.join(dir_name, f))
+                            image_urls.append(url)
                     if 插图位置:
                         positions = [int(x) for x in 插图位置.split(',')]
                     else:
