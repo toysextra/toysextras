@@ -3,7 +3,7 @@ import re
 from toys_extras.base import Base
 import pandas as pd
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 
 class Toy(Base):
@@ -27,6 +27,8 @@ class Toy(Base):
             df = pd.read_excel(file)
             for i, row in df.iterrows():
                 title = row[self.标题列名]
+                if not title or pd.isna(title):
+                    continue
                 content = row[self.内容列名]
                 if not content or pd.isna(content):
                     content = ''
