@@ -3,7 +3,7 @@ import re
 from toys_extras.base import Base
 import requests
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 
 class Toy(Base):
@@ -18,7 +18,10 @@ class Toy(Base):
         save_path = self.file_path
         if not os.path.exists(save_path):
             os.makedirs(save_path)
-        response = requests.get(self.url)
+        headers = {
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0"
+        }
+        response = requests.get(self.url, headers=headers)
         datas = response.json().get("data")
         for data in datas:
             title = data.get("title")
