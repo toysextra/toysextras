@@ -3,7 +3,7 @@ import re
 from toys_extras.base import Base
 import requests
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 
 class Toy(Base):
@@ -11,7 +11,7 @@ class Toy(Base):
     def __init__(self):
         super().__init__()
         self.result_table_view: list = [['文件名', '热度', "txt文件"]]
-        self.url = "https://hot.cigh.cn/toutiao"
+        self.url = "https://api-hot.imsyy.top/toutiao?cache=true"
         self.invalid_chars = r'[\\/:*?"<>|]'
 
     def play(self):
