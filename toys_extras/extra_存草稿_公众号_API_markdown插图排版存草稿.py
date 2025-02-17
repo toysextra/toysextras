@@ -3,9 +3,10 @@ from toys_logger import logger
 from toys_utils import WeChatAPI, split_markdown_to_paragraphs, image_size, insert_image_link_to_markdown
 import re
 import os
+import random
 from natsort import natsorted
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class Toy(Base):
@@ -14,10 +15,49 @@ class Toy(Base):
         self.access_token = ""
         self.result_table_view: list = [['文章名称', '状态', '错误信息']]
 
-    def markdown_to_html(self, md_content):
-        template_dir = self.config.get("扩展", "多模板文件夹")
-        strong_style = f"#{self.config.get("扩展", "加粗字体颜色")}"
-        font_name = self.config.get("扩展", "正文字体名称")
+    def get_template_dirs(self):
+        multiple_template_dirs = self.config.get("扩展", "多模板文件夹")
+        template_dirs = []
+        dirs = os.listdir(multiple_template_dirs)
+        if "h2.html" in dirs and "bottom.html" in dirs and "h2.html" in dirs:
+            template_dirs.append(multiple_template_dirs)
+        for d in dirs:
+            d_path = os.path.join(multiple_template_dirs, d)
+            if os.path.isfile(d_path):
+                continue
+            files_in_d = os.listdir(d_path)
+            for f in ['bottom.html', 'h2.html', 'top.html']:
+                if f not in files_in_d:
+                    break
+            else:
+                template_dirs.append(d_path)
+        return template_dirs
+
+    def markdown_to_html(self, md_content, template_dir):
+        template_files = os.listdir(template_dir)
+        if "加粗字体颜色.txt" in template_files:
+            with open(os.path.join(template_dir, '加粗字体颜色.txt'), 'r', encoding='utf-8') as f:
+                strong_font_style = f.read().strip()
+        else:
+            strong_font_style = f"{self.config.get("扩展", "加粗字体颜色")}"
+        if "加粗背景颜色.txt" in template_files:
+            with open(os.path.join(template_dir, '加粗背景颜色.txt'), 'r', encoding='utf-8') as f:
+                strong_background_style = f.read().strip()
+        else:
+            strong_background_style = f"{self.config.get('扩展', '加粗背景颜色')}"
+
+        strong_style = ""
+        if strong_font_style:
+            strong_style = f"color: #{strong_font_style};"
+        if strong_background_style:
+            strong_style += f"background-color: #{strong_background_style};"
+
+        if "正文字体名称.txt" in template_files:
+            with open(os.path.join(template_dir, '正文字体名称.txt'), 'r', encoding='utf-8') as f:
+                font_name = f.read().strip()
+        else:
+            font_name = self.config.get("扩展", "正文字体名称")
+
         with open(os.path.join(template_dir, 'top.html'), 'r', encoding='utf-8') as f:
             top = f.read().strip()
         with open(os.path.join(template_dir, 'h2.html'), 'r', encoding='utf-8') as f:
@@ -68,7 +108,7 @@ class Toy(Base):
                 if is_list_item:
                     section = re.sub(
                         r'\*\*(.+?)\*\*',
-                        lambda m: f'<strong style="color: {strong_style};">{m.group(1)}</strong>',
+                        lambda m: f'<strong style="{strong_style}">{m.group(1)}</strong>',
                         section
                     )
                     list_marker = is_list_item.group(1)
@@ -96,7 +136,7 @@ class Toy(Base):
                         current_list_items = []
                     section = re.sub(
                         r'\*\*(.+?)\*\*',
-                        lambda m: f'<strong style="color: {strong_style};">{m.group(1)}</strong>',
+                        lambda m: f'<strong style="{strong_style}">{m.group(1)}</strong>',
                         section
                     )
                     p = f'<p><span style="font-family: 微软雅黑, Microsoft YaHei;">{section}</span></p><br/>'
@@ -130,6 +170,10 @@ class Toy(Base):
             if wechat_api.access_token.startswith("登录公众号失败:"):
                 公众号已设置 = False
         if 是否插图排版:
+            template_dirs = self.get_template_dirs()
+            if not template_dirs:
+                logger.warning(f"没有找到模板文件")
+                return
             for file in self.files:
                 if not file.endswith('.md'):
                     continue
@@ -162,7 +206,7 @@ class Toy(Base):
                     else:
                         positions = []
                     markdown_text = insert_image_link_to_markdown(markdown_text, image_urls, positions)
-                html_content = self.markdown_to_html(markdown_text)
+                html_content = self.markdown_to_html(markdown_text, random.choice(template_dirs))
                 if 排版输出目录:
                     is_exist = os.path.exists(排版输出目录)
                     if not is_exist:
