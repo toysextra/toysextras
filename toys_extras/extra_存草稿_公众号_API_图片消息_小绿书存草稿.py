@@ -2,9 +2,10 @@ from toys_extras.base import Base
 from toys_logger import logger
 from toys_utils import WeChatAPI
 import os
+import shutil
 from natsort import natsorted
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class Toy(Base):
@@ -18,6 +19,7 @@ class Toy(Base):
         secret = self.config.get("扩展", "secret")
         上传图片数量 = self.config.getint("扩展", "上传图片数量")
         txt首行是标题 = True if self.config.get("扩展", "txt首行是标题") == "是" else False
+        存稿后移动文件到指定文件夹 = self.config.get("扩展", "存稿后移动文件到指定文件夹")
         公众号已设置 = True if appid and secret else False
         wechat_api = WeChatAPI(appid, secret)
         if 公众号已设置:
@@ -29,7 +31,6 @@ class Toy(Base):
             return
         if 上传图片数量 > 20:
             上传图片数量 = 20
-        articles = []
         for file in self.files:
             dir_path, file_name = os.path.split(file)
             file_name_without_ext, file_ext = os.path.splitext(file_name)
@@ -48,11 +49,14 @@ class Toy(Base):
             with open(file, "r", encoding="utf-8") as f:
                 content = f.read()
             if txt首行是标题:
-                title = content.split("\n")[0].strip().strip("标题:")
-                content = content.split("\n", 1)[1].strip("内容:").strip()
+                title, content = content.split("内容:", 1)
+                title = content.strip().strip("标题:")
+                content = content.strip()
+                if not content:
+                    self.result_table_view.append([title, "失败", "txt内容为空"])
             else:
                 title = file_name_without_ext
-            articles.append({
+            res = wechat_api.save_draft([{
                 "article_type": "newspic",
                 "title": title,
                 "content": content,
@@ -61,16 +65,11 @@ class Toy(Base):
                 "image_info": {
                     "image_list": image_media_ids
                 }
-            })
-        if not articles:
-            logger.warning("没有找到txt文件")
-            return
-        res = wechat_api.save_draft(articles)
-        if "errmsg" in res:
-            for article in articles:
-                self.result_table_view.append([article["title"], "失败", res["errmsg"]])
-        else:
-            for article in articles:
-                self.result_table_view.append([article["title"], "成功", ""])
-
+            }])
+            if "errmsg" in res:
+                self.result_table_view.append([title, "失败", res["errmsg"]])
+                continue
+            self.result_table_view.append([title, "成功", ""])
+            if 存稿后移动文件到指定文件夹:
+                shutil.move(dir_path, os.path.join(存稿后移动文件到指定文件夹, os.path.basename(dir_path))) # type: ignore
 
