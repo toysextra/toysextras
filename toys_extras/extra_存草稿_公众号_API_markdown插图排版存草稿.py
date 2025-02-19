@@ -6,7 +6,7 @@ import os
 import random
 from natsort import natsorted
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 
 class Toy(Base):
@@ -214,41 +214,42 @@ class Toy(Base):
                     html_file_name = os.path.basename(file).replace('.md', '.txt')
                     with open(os.path.join(排版输出目录, html_file_name), 'w', encoding='utf-8') as f: # type: ignore
                         f.write(html_content)
-                articles.append({
-                    "title": os.path.basename(file).replace('.md', ''),
-                    "content": html_content,
-                    "thumb_media_id": thumb
-                })
-        else:
-            for file in self.files:
-                if not file.endswith(('.txt', '.html')):
-                    continue
-                with open(file, "r", encoding="utf-8") as f:
-                    html_content = f.read().strip()
-                if not html_content.startswith('<section'):
-                    continue
-                articles.append({
-                    "title": os.path.basename(file).replace('.txt', '').replace('.html', '')[:5],
-                    "content": html_content,
-                    "thumb_media_id": ""
-
-                })
-        if 是否存稿 and 公众号已设置:
-            for article in articles:
-                if article["thumb_media_id"] == "":
-                    items = wechat_api.batch_get_material()
-                    if items:
-                        article["thumb_media_id"] = items[0]["media_id"]
+                if 是否存稿 and 公众号已设置:
+                    res =wechat_api.save_draft({
+                        "title": os.path.basename(file).replace('.md', ''),
+                        "content": html_content,
+                        "thumb_media_id": wechat_api.add_thumb(thumb)
+                    })
+                    if "errmsg" in res:
+                        self.result_table_view.append([file, "失败", res["errmsg"]])
                     else:
-                        article["thumb_media_id"] = wechat_api.add_thumb("../toys_extras_resource/存草稿_公众号_API_markdown插图排版存草稿/默认缩略图.png")
+                        self.result_table_view.append([file, "成功", ""])
+            return
+        if not (是否存稿 and 公众号已设置):
+            logger.warning(f"排版和存稿都未开启，无法进行存稿操作")
+            return
 
-                else:
-                    article["thumb_media_id"] = wechat_api.add_thumb(article["thumb_media_id"])
-            res = wechat_api.save_draft(articles)
+        items = wechat_api.batch_get_material()
+        if items:
+            thumb_media_id = items[0]["media_id"]
+        else:
+            thumb_media_id = wechat_api.add_thumb(
+                "../toys_extras_resource/存草稿_公众号_API_markdown插图排版存草稿/默认缩略图.png"
+            )
+        for file in self.files:
+            if not file.endswith(('.txt', '.html')):
+                continue
+            with open(file, "r", encoding="utf-8") as f:
+                html_content = f.read().strip()
+            if not html_content.startswith('<section'):
+                continue
+            res = wechat_api.save_draft({
+                "title": os.path.basename(file).replace('.txt', '').replace('.html', '')[:5],
+                "content": html_content,
+                "thumb_media_id": thumb_media_id
+
+            })
             if "errmsg" in res:
-                for article in articles:
-                    self.result_table_view.append([article["title"], "失败", res["errmsg"]])
+                self.result_table_view.append([file, "失败", res["errmsg"]])
             else:
-                for article in articles:
-                    self.result_table_view.append([article["title"], "成功", ""])
-
+                self.result_table_view.append([file, "成功", ""])
