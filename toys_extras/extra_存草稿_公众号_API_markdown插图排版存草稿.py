@@ -1,12 +1,13 @@
 from toys_extras.base import Base
 from toys_logger import logger
-from toys_utils import WeChatAPI, split_markdown_to_paragraphs, image_size, insert_image_link_to_markdown
+from toys_utils import WeChatAPI, ToyError, split_markdown_to_paragraphs, image_size, insert_image_link_to_markdown
 import re
 import os
 import random
+import shutil
 from natsort import natsorted
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 
 class Toy(Base):
@@ -19,7 +20,7 @@ class Toy(Base):
         multiple_template_dirs = self.config.get("扩展", "多模板文件夹")
         template_dirs = []
         dirs = os.listdir(multiple_template_dirs)
-        if "h2.html" in dirs and "bottom.html" in dirs and "h2.html" in dirs:
+        if "h2.html" in dirs and "bottom.html" in dirs and "top.html" in dirs:
             template_dirs.append(multiple_template_dirs)
         for d in dirs:
             d_path = os.path.join(multiple_template_dirs, d)
@@ -153,8 +154,8 @@ class Toy(Base):
 
 
     def play(self):
-        是否存稿 = True if self.config.get("扩展", "是否存稿") == "是" else False
-        是否插图排版 = True if self.config.get("扩展", "是否插图排版") == "是" else False
+        是否存稿 = self.config.get("扩展", "是否存稿") == "是"
+        是否插图排版 = self.config.get("扩展", "是否插图排版") == "是"
         appid = self.config.get("扩展", "appid")
         secret = self.config.get("扩展", "secret")
         插图数量 = self.config.getint("扩展", "插图数量")
@@ -162,13 +163,27 @@ class Toy(Base):
         图片最小宽度 = self.config.getint("扩展", "图片最小宽度")
         图片最小高度 = self.config.getint("扩展", "图片最小高度")
         排版输出目录 = self.config.get("扩展", "排版输出目录")
-        articles = []
-        公众号已设置 = True if appid and secret else False
-        wechat_api = WeChatAPI(appid, secret)
+        完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动文件到指定文件夹")
+
+        if not 排版输出目录 and not 是否存稿:
+            logger.warning(f"排版输出目录和是否存稿都未开启，无法进行排版操作")
+            return
+
+        网络代理 = self.config.get("扩展", "网络代理")
+        proxy = None
+        if 网络代理:
+            proxy = {"http": 网络代理, "https": 网络代理}
+
+        公众号已设置 = bool(appid and secret)
+        wechat_api = WeChatAPI(appid, secret, proxy)
         if 公众号已设置:
-            wechat_api.set_access_token()
-            if wechat_api.access_token.startswith("登录公众号失败:"):
-                公众号已设置 = False
+            try:
+                wechat_api.set_access_token()
+            except Exception as e:
+                logger.warning(f"获取access_token失败: {e}")
+                raise ToyError("登录公众号失败，请检查网络或代理")
+            公众号已设置 = not wechat_api.access_token.startswith("登录公众号失败:")
+
         if 是否插图排版:
             template_dirs = self.get_template_dirs()
             if not template_dirs:
@@ -207,6 +222,7 @@ class Toy(Base):
                         positions = []
                     markdown_text = insert_image_link_to_markdown(markdown_text, image_urls, positions)
                 html_content = self.markdown_to_html(markdown_text, random.choice(template_dirs))
+                should_move = True
                 if 排版输出目录:
                     is_exist = os.path.exists(排版输出目录)
                     if not is_exist:
@@ -215,15 +231,19 @@ class Toy(Base):
                     with open(os.path.join(排版输出目录, html_file_name), 'w', encoding='utf-8') as f: # type: ignore
                         f.write(html_content)
                 if 是否存稿 and 公众号已设置:
-                    res =wechat_api.save_draft({
+                    res = wechat_api.save_draft([{
                         "title": os.path.basename(file).replace('.md', ''),
                         "content": html_content,
                         "thumb_media_id": wechat_api.add_thumb(thumb)
-                    })
+                    }])
                     if "errmsg" in res:
+                        should_move = False
                         self.result_table_view.append([file, "失败", res["errmsg"]])
                     else:
                         self.result_table_view.append([file, "成功", ""])
+                if 完成后移动文件到指定文件夹 and should_move:
+                    shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, os.path.basename(dir_name)))  # type: ignore
+                self.result_table_view.append([file, "成功", ""])
             return
         if not (是否存稿 and 公众号已设置):
             logger.warning(f"排版和存稿都未开启，无法进行存稿操作")
@@ -243,13 +263,15 @@ class Toy(Base):
                 html_content = f.read().strip()
             if not html_content.startswith('<section'):
                 continue
-            res = wechat_api.save_draft({
+            res = wechat_api.save_draft([{
                 "title": os.path.basename(file).replace('.txt', '').replace('.html', '')[:5],
                 "content": html_content,
                 "thumb_media_id": thumb_media_id
 
-            })
+            }])
             if "errmsg" in res:
                 self.result_table_view.append([file, "失败", res["errmsg"]])
             else:
+                if 完成后移动文件到指定文件夹:
+                    shutil.move(file, os.path.join(完成后移动文件到指定文件夹,os.path.basename(file)))  # type: ignore
                 self.result_table_view.append([file, "成功", ""])
