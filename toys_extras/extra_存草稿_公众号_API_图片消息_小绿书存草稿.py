@@ -1,11 +1,11 @@
 from toys_extras.base import Base
 from toys_logger import logger
-from toys_utils import WeChatAPI
+from toys_utils import WeChatAPI, ToyError
 import os
 import shutil
 from natsort import natsorted
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 
 class Toy(Base):
@@ -20,12 +20,21 @@ class Toy(Base):
         上传图片数量 = self.config.getint("扩展", "上传图片数量")
         txt首行是标题 = True if self.config.get("扩展", "txt首行是标题") == "是" else False
         存稿后移动文件到指定文件夹 = self.config.get("扩展", "存稿后移动文件到指定文件夹")
+
+        网络代理 = self.config.get("扩展", "网络代理")
+        proxy = None
+        if 网络代理:
+            proxy = {"http": 网络代理, "https": 网络代理}
+
         公众号已设置 = True if appid and secret else False
-        wechat_api = WeChatAPI(appid, secret)
+        wechat_api = WeChatAPI(appid, secret, proxy)
         if 公众号已设置:
-            wechat_api.set_access_token()
-            if wechat_api.access_token.startswith("登录公众号失败:"):
-                公众号已设置 = False
+            try:
+                wechat_api.set_access_token()
+            except Exception as e:
+                logger.warning(f"获取access_token失败: {e}")
+                raise ToyError("登录公众号失败，请检查网络或代理")
+            公众号已设置 = not wechat_api.access_token.startswith("登录公众号失败:")
         if not 公众号已设置:
             logger.warning("公众号未设置，无法上传图片")
             return
@@ -34,7 +43,6 @@ class Toy(Base):
         for file in self.files:
             dir_path, file_name = os.path.split(file)
             file_name_without_ext, file_ext = os.path.splitext(file_name)
-            print(file_ext)
             if file_ext != ".txt":
                 continue
             images = [file for file in os.listdir(dir_path) if os.path.splitext(file)[1] in [".jpg", ".png", ".jpeg"]]
