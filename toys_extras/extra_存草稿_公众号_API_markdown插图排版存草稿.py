@@ -3,11 +3,12 @@ from toys_logger import logger
 from toys_utils import WeChatAPI, ToyError, split_markdown_to_paragraphs, image_size, insert_image_link_to_markdown
 import re
 import os
+import pathlib
 import random
 import shutil
 from natsort import natsorted
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 
 class Toy(Base):
@@ -151,7 +152,8 @@ class Toy(Base):
         final_html = re.sub(r'\n{3,}', '\n\n', final_html)
         return final_html
 
-
+    def get_default_thumb(self):
+        return os.path.join(pathlib.Path(__file__).parent.parent, "toys_extras_resource", "存草稿_公众号_API_markdown插图排版存草稿", "默认缩略图.png")
 
     def play(self):
         是否存稿 = self.config.get("扩展", "是否存稿") == "是"
@@ -220,7 +222,8 @@ class Toy(Base):
                         positions = [int(x) for x in 插图位置.split(',')]
                     else:
                         positions = []
-                    markdown_text = insert_image_link_to_markdown(markdown_text, image_urls, positions)
+                    if image_urls:
+                        markdown_text = insert_image_link_to_markdown(markdown_text, image_urls, positions)
                 html_content = self.markdown_to_html(markdown_text, random.choice(template_dirs))
                 should_move = True
                 if 排版输出目录:
@@ -231,6 +234,8 @@ class Toy(Base):
                     with open(os.path.join(排版输出目录, html_file_name), 'w', encoding='utf-8') as f: # type: ignore
                         f.write(html_content)
                 if 是否存稿 and 公众号已设置:
+                    if thumb == "":
+                        thumb = self.get_default_thumb()
                     res = wechat_api.save_draft([{
                         "title": os.path.basename(file).replace('.md', ''),
                         "content": html_content,
@@ -254,7 +259,7 @@ class Toy(Base):
             thumb_media_id = items[0]["media_id"]
         else:
             thumb_media_id = wechat_api.add_thumb(
-                "../toys_extras_resource/存草稿_公众号_API_markdown插图排版存草稿/默认缩略图.png"
+                self.get_default_thumb()
             )
         for file in self.files:
             if not file.endswith(('.txt', '.html')):
