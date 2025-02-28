@@ -8,7 +8,7 @@ import random
 import shutil
 from natsort import natsorted
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 class Toy(Base):
@@ -39,12 +39,12 @@ class Toy(Base):
         template_files = os.listdir(template_dir)
         if "加粗字体颜色.txt" in template_files:
             with open(os.path.join(template_dir, '加粗字体颜色.txt'), 'r', encoding='utf-8') as f:
-                strong_font_style = f.read().strip()
+                strong_font_style = f.read().replace("\ufeff", "")
         else:
             strong_font_style = f"{self.config.get("扩展", "加粗字体颜色")}"
         if "加粗背景颜色.txt" in template_files:
             with open(os.path.join(template_dir, '加粗背景颜色.txt'), 'r', encoding='utf-8') as f:
-                strong_background_style = f.read().strip()
+                strong_background_style = f.read().strip().replace("\ufeff", "")
         else:
             strong_background_style = f"{self.config.get('扩展', '加粗背景颜色')}"
 
@@ -56,7 +56,7 @@ class Toy(Base):
 
         if "正文字体名称.txt" in template_files:
             with open(os.path.join(template_dir, '正文字体名称.txt'), 'r', encoding='utf-8') as f:
-                font_name = f.read().strip()
+                font_name = f.read().strip().replace("\ufeff", "")
         else:
             font_name = self.config.get("扩展", "正文字体名称")
 
