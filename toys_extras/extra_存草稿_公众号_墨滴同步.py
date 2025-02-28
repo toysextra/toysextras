@@ -1,9 +1,9 @@
 from toys_extras.base_web import BaseWeb
-from playwright.sync_api import Page
+from rebrowser_playwright.sync_api import Page
 from toys_logger import logger
 from toys_utils import ToyError
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 # 修复微信公众号内容复制失败的问题
 
@@ -15,15 +15,13 @@ class Toy(BaseWeb):
         self.url = "https://mp.weixin.qq.com"
         self.result_table_view: list = [['文章名称', '状态']]
 
-    @staticmethod
-    def handle_request(route):
-        response = route.fetch()
+    def handle_request(self, route):
+        response = self.page.request.fetch(route.request, ignore_https_errors=True)
         text = response.text()
         text = text.replace("const e=CD();", "const e=CD();window.WXCOPY=e;return;")
         route.fulfill(body=text, status=200)
 
     def choose_catalog(self, catalog_name: str, depth: int = 1) -> None:
-        print(depth)
         if depth == 5:
             raise ToyError("选择墨滴文件夹失败，请确认文件夹名称是否正确")
         try:
