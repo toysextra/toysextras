@@ -246,9 +246,10 @@ class Toy(Base):
                         self.result_table_view.append([file, "失败", res["errmsg"]])
                     else:
                         self.result_table_view.append([file, "成功", ""])
+                else:
+                    self.result_table_view.append([file, "成功", ""])
                 if 完成后移动文件到指定文件夹 and should_move:
                     shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, os.path.basename(dir_name)))  # type: ignore
-                self.result_table_view.append([file, "成功", ""])
             return
         if not (是否存稿 and 公众号已设置):
             logger.warning(f"排版和存稿都未开启，无法进行存稿操作")
