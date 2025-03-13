@@ -5,9 +5,10 @@ import os
 import random
 import shutil
 import re
+import requests
 from natsort import natsorted
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class Toy(Base):
@@ -50,15 +51,41 @@ class Toy(Base):
         return files_map
 
     @staticmethod
-    def generate_html(photos, template_dir):
+    def read_template(file, wechat_api: WeChatAPI):
+        # 在html中查找所有图片链接，并替换为微信公众号图片链接
+        with open(file, 'r', encoding='utf-8') as f:
+            html_content = f.read().strip()
+        if wechat_api.access_token == "":
+            return html_content
+        # 提取html_content中的图片链接
+        links = re.findall(r'<img.*?src="(.*?)"', html_content)
+        links.extend(re.findall(r'background(?:-image)?:\s*url\(&quot;(https?://.*?)&quot;\)', html_content))
+        replaced = False
+        for link in links:
+            if link.startswith('http') and not link.startswith('http://mmbiz.qpic.cn'):
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                }
+                response = requests.get(link, headers=headers)
+                if response.status_code == 200:
+                    with open('temp.jpg', 'wb') as f:
+                        f.write(response.content)
+                    gzh_url = wechat_api.upload_article_image('temp.jpg')
+                    html_content = html_content.replace(link, gzh_url)
+                    os.remove('temp.jpg')
+                replaced = True
+        if replaced:
+            with open(file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+        return html_content
+
+    def generate_html(self, photos, template_dir, wechat_api: WeChatAPI):
         html_parts = []
         template_files = os.listdir(template_dir)
         if 'top.html' in template_files:
-            with open(os.path.join(template_dir, 'top.html'), 'r', encoding='utf-8') as f:
-                html_parts.append(f.read().strip())
+            html_parts.append(self.read_template(os.path.join(template_dir, 'top.html'), wechat_api))
         if 'first_line.html' in template_files:
-            with open(os.path.join(template_dir, 'first_line.html'), 'r', encoding='utf-8') as f:
-                first_line_template = f.read().strip()
+            first_line_template = self.read_template(os.path.join(template_dir, 'first_line.html'), wechat_api)
             first_line_photo_num = first_line_template.count('{插图位置}')
             for photo in photos[:first_line_photo_num]:
                 first_line_template = first_line_template.replace('{插图位置}', photo, 1)
@@ -66,8 +93,7 @@ class Toy(Base):
             photos = photos[first_line_photo_num:]
 
         if 'middle_line.html' in template_files:
-            with open(os.path.join(template_dir,'middle_line.html'), 'r', encoding='utf-8') as f:
-                middle_line_template = f.read().strip()
+            middle_line_template = self.read_template(os.path.join(template_dir,'middle_line.html'), wechat_api)
             middle_line_photo_num = middle_line_template.count('{插图位置}')
             for i in range(len(photos) // middle_line_photo_num):
                 temp_middle_line_template = middle_line_template
@@ -78,8 +104,7 @@ class Toy(Base):
 
         if 'last_line.html' in template_files:
             append_last_line = False
-            with open(os.path.join(template_dir, 'last_line.html'), 'r', encoding='utf-8') as f:
-                last_line_template = f.read().strip()
+            last_line_template = self.read_template(os.path.join(template_dir, 'last_line.html'), wechat_api)
             last_line_photo_num = last_line_template.count('{插图位置}')
             for photo in photos[:last_line_photo_num]:
                 append_last_line = True
@@ -88,8 +113,7 @@ class Toy(Base):
                 html_parts.append(last_line_template)
 
         if 'bottom.html' in template_files:
-            with open(os.path.join(template_dir, 'bottom.html'), 'r', encoding='utf-8') as f:
-                html_parts.append(f.read().strip())
+            html_parts.append(self.read_template(os.path.join(template_dir, 'bottom.html'), wechat_api))
 
         final_html = '\n'.join(html_parts)
         final_html = re.sub(r'\n{3,}', '\n\n', final_html)
@@ -141,7 +165,7 @@ class Toy(Base):
                 continue
             files = natsorted(files)
             image_links = [wechat_api.upload_article_image(file) for file in files]
-            html_content = self.generate_html(image_links, random.choice(template_dirs))
+            html_content = self.generate_html(image_links, random.choice(template_dirs), wechat_api)
             if 排版输出目录:
                 html_file_name = os.path.basename(dir_name)
                 with open(os.path.join(排版输出目录, f"{html_file_name}.txt"), 'w', encoding='utf-8') as f:  # type: ignore
