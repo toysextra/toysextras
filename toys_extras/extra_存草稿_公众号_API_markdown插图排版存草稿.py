@@ -6,9 +6,10 @@ import os
 import pathlib
 import random
 import shutil
+import requests
 from natsort import natsorted
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 
 class Toy(Base):
@@ -35,7 +36,35 @@ class Toy(Base):
                 template_dirs.append(d_path)
         return template_dirs
 
-    def markdown_to_html(self, md_content, template_dir):
+    @staticmethod
+    def read_template(file, wechat_api: WeChatAPI):
+        # 在html中查找所有图片链接，并替换为微信公众号图片链接
+        with open(file, 'r', encoding='utf-8') as f:
+            html_content = f.read().strip()
+        if wechat_api.access_token == "":
+            return html_content
+        links = re.findall(r'<img.*?src="(.*?)"', html_content)
+        links.extend(re.findall(r'background(?:-image)?:\s*url\(&quot;(https?://.*?)&quot;\)', html_content))
+        replaced = False
+        for link in links:
+            if link.startswith('http') and not link.startswith('http://mmbiz.qpic.cn'):
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36',
+                }
+                response = requests.get(link, headers=headers)
+                if response.status_code == 200:
+                    with open('temp.jpg', 'wb') as f:
+                        f.write(response.content)
+                    gzh_url = wechat_api.upload_article_image('temp.jpg')
+                    html_content = html_content.replace(link, gzh_url)
+                    os.remove('temp.jpg')
+                replaced = True
+        if replaced:
+            with open(file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+        return html_content
+
+    def markdown_to_html(self, md_content, template_dir, wechat_api: WeChatAPI):
         template_files = os.listdir(template_dir)
         if "加粗字体颜色.txt" in template_files:
             with open(os.path.join(template_dir, '加粗字体颜色.txt'), 'r', encoding='utf-8') as f:
@@ -60,12 +89,19 @@ class Toy(Base):
         else:
             font_name = self.config.get("扩展", "正文字体名称")
 
-        with open(os.path.join(template_dir, 'top.html'), 'r', encoding='utf-8') as f:
-            top = f.read().strip()
-        with open(os.path.join(template_dir, 'h2.html'), 'r', encoding='utf-8') as f:
-            h2_template = f.read()
-        with open(os.path.join(template_dir, 'bottom.html'), 'r', encoding='utf-8') as f:
-            bottom = f.read().strip()
+        if "h3.html" in template_files:
+            h3_template = self.read_template(os.path.join(template_dir, 'h3.html'), wechat_api)
+        else:
+            h3_template = '<h3>{h3_text}</h3>'
+
+        if "h4.html" in template_files:
+            h4_template = self.read_template(os.path.join(template_dir, 'h4.html'), wechat_api)
+        else:
+            h4_template = '<h4>{h4_text}</h4>'
+
+        top = self.read_template(os.path.join(template_dir, 'top.html'), wechat_api)
+        h2_template = self.read_template(os.path.join(template_dir, 'h2.html'), wechat_api)
+        bottom = self.read_template(os.path.join(template_dir, 'bottom.html'), wechat_api)
 
         html_parts = [top]
 
@@ -87,14 +123,19 @@ class Toy(Base):
         for section in sections[1:]:
             if section.strip() == '---':
                 continue
-            if section.startswith('##'):
+            if re.match(r'^#{2,4}\s+', section):
                 if current_list_type is not None:
                     html_parts.append(f'<{current_list_type}>{"".join(current_list_items)}</{current_list_type}>')
                     current_list_type = None
                     current_list_items = []
+
                 section_html = re.sub(
-                    r'^##\s+(.+?)(\n|$)',
-                    lambda m: h2_template.replace('{h2_text}', m.group(1)),
+                    r'^(#{2,4})\s+(.+?)(\n|$)',
+                    lambda m: (
+                        h2_template.replace('{h2_text}', m.group(2).replace('**', '')) if len(m.group(1)) == 2 else
+                        h3_template.replace('{h3_text}', m.group(2).replace('**', '')) if len(m.group(1)) == 3 else
+                        h4_template.replace('{h4_text}', m.group(2).replace('**', ''))
+                    ),
                     section,
                     flags=re.MULTILINE
                 )
@@ -224,7 +265,7 @@ class Toy(Base):
                         positions = []
                     if image_urls:
                         markdown_text = insert_image_link_to_markdown(markdown_text, image_urls, positions)
-                html_content = self.markdown_to_html(markdown_text, random.choice(template_dirs))
+                html_content = self.markdown_to_html(markdown_text, random.choice(template_dirs), wechat_api)
                 should_move = True
                 if 排版输出目录:
                     is_exist = os.path.exists(排版输出目录)
