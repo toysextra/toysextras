@@ -8,7 +8,7 @@ import re
 import requests
 from natsort import natsorted
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 
 class Toy(Base):
@@ -115,8 +115,11 @@ class Toy(Base):
         if 'bottom.html' in template_files:
             html_parts.append(self.read_template(os.path.join(template_dir, 'bottom.html'), wechat_api))
 
-        final_html = '\n'.join(html_parts)
-        final_html = re.sub(r'\n{3,}', '\n\n', final_html)
+        final_html = ''
+        for part in html_parts:
+            for line in part.splitlines():
+                line = line.strip()
+                final_html += line
         final_html = final_html.replace('\u00A0', ' ')
         return final_html
 
@@ -185,4 +188,3 @@ class Toy(Base):
                     self.result_table_view.append([dir_name, "成功", ""])
             if 完成后移动文件到指定文件夹 and should_move:
                 shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, dir_name))  # type: ignore
-
