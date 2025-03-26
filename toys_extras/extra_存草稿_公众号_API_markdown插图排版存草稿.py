@@ -9,7 +9,7 @@ import shutil
 import requests
 from natsort import natsorted
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 
 
 class Toy(Base):
@@ -189,8 +189,12 @@ class Toy(Base):
             html_parts.append(f'<{current_list_type}>{"".join(current_list_items)}</{current_list_type}>')
 
         html_parts.append(bottom)
-        final_html = '\n'.join(html_parts)
-        final_html = re.sub(r'\n{3,}', '\n\n', final_html)
+        final_html = ''
+        for part in html_parts:
+            for line in part.splitlines():
+                line = line.strip()
+                final_html += line
+        final_html = final_html.replace('\u00A0', ' ')
         return final_html
 
     def get_default_thumb(self):
@@ -290,7 +294,10 @@ class Toy(Base):
                 else:
                     self.result_table_view.append([file, "成功", ""])
                 if 完成后移动文件到指定文件夹 and should_move:
-                    shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, os.path.basename(dir_name)))  # type: ignore
+                    if dir_name == self.file_path:
+                        shutil.move(file, os.path.join(完成后移动文件到指定文件夹, os.path.basename(file))) # type: ignore
+                    else:
+                        shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, os.path.basename(dir_name)))  # type: ignore
             return
         if not (是否存稿 and 公众号已设置):
             logger.warning(f"排版和存稿都未开启，无法进行存稿操作")
