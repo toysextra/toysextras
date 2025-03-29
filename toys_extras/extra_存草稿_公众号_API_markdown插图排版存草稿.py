@@ -9,7 +9,7 @@ import shutil
 import requests
 from natsort import natsorted
 
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 
 
 class Toy(Base):
@@ -237,7 +237,7 @@ class Toy(Base):
                 logger.warning(f"没有找到模板文件")
                 return
             for file in self.files:
-                if not file.endswith('.md', '.txt'):
+                if not file.endswith(('.md', '.txt')):
                     continue
                 with open(file, "r", encoding="utf-8") as f:
                     markdown_text = f.read()
@@ -276,7 +276,7 @@ class Toy(Base):
                     is_exist = os.path.exists(排版输出目录)
                     if not is_exist:
                         os.makedirs(排版输出目录)
-                    html_file_name = f"{file_name_without_ext}.html"
+                    html_file_name = f"{file_name_without_ext}.txt"
                     with open(os.path.join(排版输出目录, html_file_name), 'w', encoding='utf-8') as f: # type: ignore
                         f.write(html_content)
                 if 是否存稿 and 公众号已设置:
