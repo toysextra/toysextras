@@ -242,6 +242,7 @@ class Toy(Base):
                 with open(file, "r", encoding="utf-8") as f:
                     markdown_text = f.read()
                 dir_name = os.path.dirname(file)
+                file_name_without_ext = os.path.splitext(os.path.basename(file))[0]
                 thumb = ""
                 if 插图数量 != 0:
                     # 查找md同目录下的图片文件
@@ -275,14 +276,14 @@ class Toy(Base):
                     is_exist = os.path.exists(排版输出目录)
                     if not is_exist:
                         os.makedirs(排版输出目录)
-                    html_file_name = os.path.basename(file).replace('.md', '.txt')
+                    html_file_name = f"{file_name_without_ext}.html"
                     with open(os.path.join(排版输出目录, html_file_name), 'w', encoding='utf-8') as f: # type: ignore
                         f.write(html_content)
                 if 是否存稿 and 公众号已设置:
                     if thumb == "":
                         thumb = self.get_default_thumb()
                     res = wechat_api.save_draft([{
-                        "title": os.path.basename(file).replace('.md', ''),
+                        "title": file_name_without_ext,
                         "content": html_content,
                         "thumb_media_id": wechat_api.add_thumb(thumb)
                     }])
