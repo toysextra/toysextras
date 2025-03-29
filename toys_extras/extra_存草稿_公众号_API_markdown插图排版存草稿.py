@@ -9,7 +9,7 @@ import shutil
 import requests
 from natsort import natsorted
 
-__version__ = "1.0.7"
+__version__ = "1.0.8"
 
 
 class Toy(Base):
@@ -237,7 +237,7 @@ class Toy(Base):
                 logger.warning(f"没有找到模板文件")
                 return
             for file in self.files:
-                if not file.endswith('.md'):
+                if not file.endswith('.md', '.txt'):
                     continue
                 with open(file, "r", encoding="utf-8") as f:
                     markdown_text = f.read()
