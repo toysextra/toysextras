@@ -124,7 +124,7 @@ class Toy(Base):
         return final_html
 
     def get_html_h1(self, html_content):
-        return re.findall(r'<h1>(.*?)</h1>', html_content, re.DOTALL)[0]
+        return re.findall(r'<h1>(.*?)</h1>', html_content, re.DOTALL)
 
     def play(self):
         appid = self.config.get("扩展", "appid")
@@ -182,6 +182,8 @@ class Toy(Base):
                 title = self.get_html_h1(html_content)
                 if not title:
                     title = os.path.basename(dir_name)
+                else:
+                    title = title[0]
                 res = wechat_api.save_draft([{
                     "title": title,
                     "content": html_content,
@@ -194,3 +196,4 @@ class Toy(Base):
                     self.result_table_view.append([dir_name, "成功", ""])
             if 完成后移动文件到指定文件夹 and should_move:
                 shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, dir_name))  # type: ignore
+
