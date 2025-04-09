@@ -8,7 +8,7 @@ import re
 import requests
 from natsort import natsorted
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 
 class Toy(Base):
@@ -123,10 +123,14 @@ class Toy(Base):
         final_html = final_html.replace('\u00A0', ' ')
         return final_html
 
+    def get_html_h1(self, html_content):
+        return re.findall(r'<h1>(.*?)</h1>', html_content, re.DOTALL)[0]
+
     def play(self):
         appid = self.config.get("扩展", "appid")
         secret = self.config.get("扩展", "secret")
         是否存稿 = True if self.config.get("扩展", "是否存稿") == "是" else False
+        输出文件格式 = "txt" if self.config.get("扩展", "输出文件格式") not in ["txt", "html"] else self.config.get("扩展", "输出文件格式")
         排版输出目录 = self.config.get("扩展", "排版输出目录")
         完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动文件到指定文件夹")
 
@@ -171,11 +175,13 @@ class Toy(Base):
             html_content = self.generate_html(image_links, random.choice(template_dirs), wechat_api)
             if 排版输出目录:
                 html_file_name = os.path.basename(dir_name)
-                with open(os.path.join(排版输出目录, f"{html_file_name}.txt"), 'w', encoding='utf-8') as f:  # type: ignore
+                with open(os.path.join(排版输出目录, f"{html_file_name}.{输出文件格式}"), 'w', encoding='utf-8') as f:  # type: ignore
                     f.write(html_content)
             should_move = True
             if 是否存稿:
-                title = os.path.basename(dir_name)
+                title = self.get_html_h1(html_content)
+                if not title:
+                    title = os.path.basename(dir_name)
                 res = wechat_api.save_draft([{
                     "title": title,
                     "content": html_content,
