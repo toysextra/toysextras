@@ -201,7 +201,7 @@ class Toy(Base):
         return os.path.join(pathlib.Path(__file__).parent.parent, "toys_extras_resource", "存草稿_公众号_API_markdown插图排版存草稿", "默认缩略图.png")
 
     def get_html_h1(self, html_content):
-        return re.findall(r'<h1>(.*?)</h1>', html_content, re.DOTALL)[0]
+        return re.findall(r'<h1>(.*?)</h1>', html_content, re.DOTALL)
 
     def play(self):
         是否存稿 = self.config.get("扩展", "是否存稿") == "是"
@@ -288,6 +288,8 @@ class Toy(Base):
                     title = self.get_html_h1(html_content)
                     if not title:
                         title = file_name_without_ext
+                    else:
+                        title = title[0]
                     res = wechat_api.save_draft([{
                         "title": title,
                         "content": html_content,
@@ -327,6 +329,8 @@ class Toy(Base):
             title = self.get_html_h1(html_content)
             if not title:
                 title = os.path.basename(file).replace('.txt', '').replace('.html', '')
+            else:
+                title = title[0]
             res = wechat_api.save_draft([{
                 "title": title,
                 "content": html_content,
