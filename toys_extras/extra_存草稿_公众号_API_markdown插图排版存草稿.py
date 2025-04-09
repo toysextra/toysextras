@@ -9,7 +9,7 @@ import shutil
 import requests
 from natsort import natsorted
 
-__version__ = "1.0.9"
+__version__ = "1.1.0"
 
 
 class Toy(Base):
@@ -200,6 +200,9 @@ class Toy(Base):
     def get_default_thumb(self):
         return os.path.join(pathlib.Path(__file__).parent.parent, "toys_extras_resource", "存草稿_公众号_API_markdown插图排版存草稿", "默认缩略图.png")
 
+    def get_html_h1(self, html_content):
+        return re.findall(r'<h1>(.*?)</h1>', html_content, re.DOTALL)[0]
+
     def play(self):
         是否存稿 = self.config.get("扩展", "是否存稿") == "是"
         是否插图排版 = self.config.get("扩展", "是否插图排版") == "是"
@@ -209,9 +212,9 @@ class Toy(Base):
         插图位置 = self.config.get("扩展", "插图位置")
         图片最小宽度 = self.config.getint("扩展", "图片最小宽度")
         图片最小高度 = self.config.getint("扩展", "图片最小高度")
+        输出文件格式 = "txt" if self.config.get("扩展", "输出文件格式") not in ["txt", "html"] else self.config.get("扩展", "输出文件格式")
         排版输出目录 = self.config.get("扩展", "排版输出目录")
         完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动文件到指定文件夹")
-
         if not 排版输出目录 and not 是否存稿:
             logger.warning(f"排版输出目录和是否存稿都未开启，无法进行排版操作")
             return
@@ -276,14 +279,17 @@ class Toy(Base):
                     is_exist = os.path.exists(排版输出目录)
                     if not is_exist:
                         os.makedirs(排版输出目录)
-                    html_file_name = f"{file_name_without_ext}.txt"
+                    html_file_name = f"{file_name_without_ext}.{输出文件格式}"
                     with open(os.path.join(排版输出目录, html_file_name), 'w', encoding='utf-8') as f: # type: ignore
                         f.write(html_content)
                 if 是否存稿 and 公众号已设置:
                     if thumb == "":
                         thumb = self.get_default_thumb()
+                    title = self.get_html_h1(html_content)
+                    if not title:
+                        title = file_name_without_ext
                     res = wechat_api.save_draft([{
-                        "title": file_name_without_ext,
+                        "title": title,
                         "content": html_content,
                         "thumb_media_id": wechat_api.add_thumb(thumb)
                     }])
@@ -318,8 +324,11 @@ class Toy(Base):
                 html_content = f.read().strip()
             if not html_content.startswith('<section'):
                 continue
+            title = self.get_html_h1(html_content)
+            if not title:
+                title = os.path.basename(file).replace('.txt', '').replace('.html', '')
             res = wechat_api.save_draft([{
-                "title": os.path.basename(file).replace('.txt', '').replace('.html', '')[:5],
+                "title": title,
                 "content": html_content,
                 "thumb_media_id": thumb_media_id
 
