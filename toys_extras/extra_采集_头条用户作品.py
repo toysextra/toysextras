@@ -5,7 +5,7 @@ from toys_logger import logger
 from datetime import datetime, timedelta
 import os
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 
 class Toy(BaseWeb):
@@ -18,7 +18,9 @@ class Toy(BaseWeb):
         作者主页地址 = self.config.get("扩展", "作者主页地址")
         采集类别 = self.config.get("扩展", "采集类别")
         最低阅读量 = self.config.get("扩展", "最低阅读量")
-        发布时间n天内 = int(self.config.get("扩展", "发布时间n天内"))
+        发布日期 = self.config.get("扩展", "发布日期")
+        发布时间起始 = self.config.get("扩展", "发布时间起始")
+        发布时间截止 = self.config.get("扩展", "发布时间截止")
         存储目录 = self.config.get("扩展", "存储目录")
         excel作者主页地址列标题名 = self.config.get("扩展", "excel作者主页地址列标题名")
         if not 作者主页地址 and not self.files:
@@ -44,7 +46,20 @@ class Toy(BaseWeb):
                 else:
                     url = url_cell.value
                 urls.append(url)
-        publish_time_n_days_ago = (datetime.now() - timedelta(days=发布时间n天内)).replace(hour=0, minute=0, second=0, microsecond=0)
+        if not 发布日期:
+            logger.info("发布日期未设置，不进行采集")
+            return
+        publish_date = datetime.now() - timedelta(days=int(发布日期))
+        if 发布时间起始:
+            publish_time_start = datetime.strptime(发布时间起始, '%H:%M:%S')
+            publish_time_start = publish_date.replace(hour=publish_time_start.hour, minute=publish_time_start.minute, second=publish_time_start.second, microsecond=0)
+        else:
+            publish_time_start = publish_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        if 发布时间截止:
+            publish_time_end = datetime.strptime(发布时间截止, '%H:%M:%S')
+            publish_time_end = publish_date.replace(hour=publish_time_end.hour, minute=publish_time_end.minute, second=publish_time_end.second, microsecond=0)
+        else:
+            publish_time_end = datetime.now().replace(microsecond=0)
         collect_articles = []
         match 采集类别:
             case "文章":
@@ -72,9 +87,11 @@ class Toy(BaseWeb):
                     for article in articles:
                         publish_time = article["publish_time"]
                         publish_time = datetime.fromtimestamp(publish_time)
-                        if publish_time < publish_time_n_days_ago:
+                        if publish_time < publish_time_start:
                             if article is articles[-1]:
                                 need_more_data = False
+                            continue
+                        if publish_time > publish_time_end or publish_time < publish_time_start:
                             continue
                         if article["itemCell"]["itemCounter"]["readCount"] < int(最低阅读量):
                             continue
@@ -92,6 +109,7 @@ class Toy(BaseWeb):
             except Exception as e:
                 logger.error(f"打开{url}失败: {e}")
                 continue
+        self.page.close()
         if not collect_articles:
             logger.info("没有找到符合条件的文章")
             return
