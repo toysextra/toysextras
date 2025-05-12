@@ -1,9 +1,9 @@
 import os
-import re
 from toys_extras.base import Base
+from toys_utils import sanitize_filename
 import pandas as pd
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 
 class Toy(Base):
@@ -14,7 +14,6 @@ class Toy(Base):
     def __init__(self):
         super().__init__()
         self.result_table_view: list = [['文件名', '状态', "txt文件"]]
-        self.invalid_chars = r'[\\/:*?"<>|]'
 
     def play(self):
         一份txt一个文件夹 =True if self.config.get('扩展', "一份txt一个文件夹") == "是" else False
@@ -33,7 +32,7 @@ class Toy(Base):
                 if not content or pd.isna(content):
                     content = ''
                 # 去除标题中的非法字符
-                title = re.sub(self.invalid_chars, '_', title)
+                title = sanitize_filename(title)
                 if 一份txt一个文件夹:
                     article_dir = os.path.join(dir_name, title)
                     os.makedirs(article_dir, exist_ok=True)
