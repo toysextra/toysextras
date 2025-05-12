@@ -1,9 +1,9 @@
 import os
-import re
 from toys_extras.base import Base
+from toys_utils import sanitize_filename
 import requests
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 
 class Toy(Base):
@@ -12,7 +12,6 @@ class Toy(Base):
         super().__init__()
         self.result_table_view: list = [['文件名', '热度', "txt文件"]]
         self.url = "https://api-hot.imsyy.top/baidu?cache=true"
-        self.invalid_chars = r'[\\/:*?"<>|]'
 
     def play(self):
         save_path = self.file_path
@@ -25,7 +24,7 @@ class Toy(Base):
         datas = response.json().get("data")
         for data in datas:
             title = data.get("title")
-            file_title = re.sub(self.invalid_chars, '_', title)
+            file_title = sanitize_filename(title)
             article_path = os.path.join(save_path, f"{file_title}")
             os.makedirs(article_path, exist_ok=True)
             txt_path = os.path.join(article_path, f"{file_title}.txt")
