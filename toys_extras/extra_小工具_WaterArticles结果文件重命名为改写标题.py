@@ -1,15 +1,14 @@
 import os
-import re
 from toys_extras.base import Base
+from toys_utils import sanitize_filename
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 
 class Toy(Base):
 
     def __init__(self):
         super().__init__()
-        self.invalid_chars = r'[\\/:*?"<>|]'
         self.result_table_view: list = [['文件', '状态']]
 
     @staticmethod
@@ -33,7 +32,7 @@ class Toy(Base):
             if file.endswith('.txt') and "改写_标题_" in file:
                 with open(file, 'r', encoding='utf-8') as f:
                     content = f.read().strip()
-                    content = re.sub(self.invalid_chars, '_', content)
+                    content = sanitize_filename(content)
                 file_name = os.path.basename(file).rsplit('.', maxsplit=1)[0].replace('改写_标题_', '')
                 txt_status, markdown_status, word_status = '失败', '失败', '失败'
                 file_path = os.path.dirname(file)
