@@ -5,14 +5,14 @@ from toys_logger import logger
 from datetime import datetime, timedelta
 import os
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 
 class Toy(BaseWeb):
 
     def __init__(self, page: Page):
         super().__init__(page)
-        self.result_table_view: list = [['文章标题', "链接", "热度", "发布时间", "作者"]]
+        self.result_table_view: list = [['文章标题', "类型", "链接", "热度", "发布时间", "作者"]]
 
     def play(self):
         作者主页地址 = self.config.get("扩展", "作者主页地址")
@@ -75,7 +75,7 @@ class Toy(BaseWeb):
                 with self.page.expect_response(lambda response: url_patten in response.url) as response_info:
                     self.page.goto(url)
                     if self.page.title() == "404错误页":
-                        self.result_table_view.append([f"{url} 不存在", "", "", "", ""])
+                        self.result_table_view.append([f"{url} 不存在", "", "", "", "", ""])
                         continue
                     type_locator = self.page.get_by_role("tab", name=采集类别)
                     if type_locator.get_attribute("aria-selected") != "true":
@@ -85,6 +85,7 @@ class Toy(BaseWeb):
                 while need_more_data:
                     articles = response.json()["data"]
                     for article in articles:
+                        article_type = article["log_pb"].get("article_type", "")
                         publish_time = article["publish_time"]
                         publish_time = datetime.fromtimestamp(publish_time)
                         if publish_time < publish_time_start:
@@ -93,19 +94,33 @@ class Toy(BaseWeb):
                             continue
                         if publish_time > publish_time_end or publish_time < publish_time_start:
                             continue
-                        if article["itemCell"]["itemCounter"]["readCount"] < int(最低阅读量):
-                            continue
-                        title = article["title"]
-                        link = article["url"]
                         read_count = article["itemCell"]["itemCounter"]["readCount"]
-                        author = article["user_info"]["name"]
-                        self.result_table_view.append([title, link, read_count, publish_time, author])
-                        collect_articles.append([title, link, read_count, publish_time, author])
+                        if read_count < int(最低阅读量):
+                            continue
+                        if article_type == "weitoutiao":
+                            title = article['share']["share_title"]
+                            link = article["share_url"]
+                            author = article["user"]["screen_name"]
+                            type_ = "微头条"
+                        elif "video_source" in article:
+                            title = article['share']["share_title"]
+                            link = article["share_url"]
+                            author = article["user_info"]["name"]
+                            type_ = "视频"
+                        else:
+                            title = article["title"]
+                            link = article["url"]
+                            author = article["user_info"]["name"]
+                            type_ = "文章"
+                        self.result_table_view.append([title, type_, link, read_count, publish_time, author])
+                        collect_articles.append([title, type_, link, read_count, publish_time, author])
                     if need_more_data and response.json()["has_more"]:
                         with self.page.expect_response(lambda response: url_patten in response.url) as response_info:
                             self.page.evaluate("window.scrollTo(0, document.body.scrollHeight);")
                             self.page.wait_for_timeout(1000)
                         response = response_info.value
+                    else:
+                        need_more_data = False
             except Exception as e:
                 logger.error(f"打开{url}失败: {e}")
                 continue
@@ -123,5 +138,3 @@ class Toy(BaseWeb):
         for row in collect_articles:
             sheet.append(row)
         workbook.save(filepath)
-
-
