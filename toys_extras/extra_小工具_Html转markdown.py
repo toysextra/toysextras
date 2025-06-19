@@ -14,7 +14,7 @@ class Toy(Base):
 
     def play(self):
         logger_prefix = "Html转markdown"
-        保存至 = self.config.get('扩展', 'markdown保存至')
+        保存至 = self.config.get('扩展', '输出目录')
         是否删除原文件 = True if self.config.get('扩展', '是否删除原文件') == '是' else False
         if not 保存至:
             logger.error(f"{logger_prefix} 未设置markdown保存至目录")
