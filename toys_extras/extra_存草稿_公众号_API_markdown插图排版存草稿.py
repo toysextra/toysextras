@@ -7,7 +7,7 @@ import pathlib
 import random
 import requests
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 
 class Toy(Base, MarkdownToHtmlConverter):
@@ -137,7 +137,8 @@ class Toy(Base, MarkdownToHtmlConverter):
                     else:
                         cover_image_url = links[-1]
                     resp = requests.get(cover_image_url, stream=True, headers=self.header_with_ua)
-                    temp = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp.jpg")
+                    random.seed(dir_name)
+                    temp = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"temp{random.randint(10000, 99999999)}.jpg")
                     with open(temp, 'wb') as f:
                         f.write(resp.content)
                     thumb = wechat_api.add_thumb(temp)
