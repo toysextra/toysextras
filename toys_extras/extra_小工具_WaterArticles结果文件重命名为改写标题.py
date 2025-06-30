@@ -2,7 +2,7 @@ import os
 from toys_extras.base import Base
 from toys_utils import sanitize_filename
 
-__version__ = '1.0.2'
+__version__ = '1.0.4'
 
 
 class Toy(Base):
@@ -13,16 +13,12 @@ class Toy(Base):
 
     @staticmethod
     def rename(path, file_name, new_name, file_type):
-        file_name = file_name + '.' + file_type
         new_name = new_name + '.' + file_type
-        if os.path.exists(os.path.join(path, file_name)):
-            try:
-                os.rename(os.path.join(path, file_name), os.path.join(path, new_name))
-            except Exception as e:
-                return False
-            return True
+        for file in os.listdir(path):
+            if file.startswith(file_name) and file.endswith(file_type):
+                os.rename(os.path.join(path, file), os.path.join(path, new_name))
+                return True
         return False
-
 
     def play(self):
         txt汇总目录 = self.config.get("扩展", "txt汇总目录")
@@ -51,4 +47,3 @@ class Toy(Base):
                 if self.rename(word汇总目录, file_name, content, file_type='docx'):
                     word_status = '成功'
                 self.result_table_view.append([file_name, f"txt:{txt_status}, markdown:{markdown_status}, word:{word_status}"])
-
