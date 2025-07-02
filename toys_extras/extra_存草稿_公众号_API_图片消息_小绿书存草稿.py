@@ -5,7 +5,7 @@ import os
 import shutil
 from natsort import natsorted
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 
 class Toy(Base):
@@ -21,7 +21,7 @@ class Toy(Base):
         txt首行是标题 = True if self.config.get("扩展", "txt首行是标题") == "是" else False
         存稿后移动文件到指定文件夹 = self.config.get("扩展", "存稿后移动文件到指定文件夹")
 
-        网络代理 = self.config.get("扩展", "网络代理")
+        网络代理 = self.config.get("扩展", "网络代理 -- 可选，填写格式“协议://用户名:密码@ip:port”")
         proxy = None
         if 网络代理:
             proxy = {"http": 网络代理, "https": 网络代理}
@@ -80,4 +80,3 @@ class Toy(Base):
             self.result_table_view.append([title, "成功", ""])
             if 存稿后移动文件到指定文件夹:
                 shutil.move(dir_path, os.path.join(存稿后移动文件到指定文件夹, os.path.basename(dir_path))) # type: ignore
-
