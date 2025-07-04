@@ -8,7 +8,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -81,7 +81,8 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         # 公众号首页
         page_home = context.new_page()
         page_home.goto(self.url)
-        if page_home.locator("a", has_text="登录").is_visible(timeout=2000):
+        page_home.locator('[title="公众号"]').wait_for()
+        if page_home.locator("a", has_text="登录").is_visible():
             page_home.locator("a", has_text="登录").click()
 
         popup = None
@@ -205,7 +206,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                     )
                 self.random_wait()
                 h1 = popup.locator("#ueditor_0 div[contenteditable=true] h1").first
-                if h1.is_visible(timeout=1000):
+                if h1.is_visible():
                     title = h1.inner_text()
                     h1.evaluate("element => element.remove()")
                 else:
