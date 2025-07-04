@@ -4,7 +4,7 @@ from toys_logger import logger
 from toys_extras.articles import Articles
 from playwright.sync_api import Page
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 # 更新日志
 # 1.0.1 修复选择墨滴文件夹失败的问题
 # 1.0.2 同步墨滴网站改版，修复上传失败的问题
@@ -93,7 +93,8 @@ class Toy(Articles):
                     continue
                 self.result_table_view[self.result_table_view.index(line)][1] = "已处理"
             except Exception as e:
-                if self.page.get_by_role("button", name="升级会员").is_visible(timeout=5000):
+                self.page.wait_for_timeout(2000)
+                if self.page.get_by_role("button", name="升级会员").is_visible():
                     no_space = True
                     e = "墨滴空间不足"
                 else:
