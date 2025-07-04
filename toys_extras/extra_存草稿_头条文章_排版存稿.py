@@ -6,7 +6,7 @@ import os
 import random
 
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 
 class Toy(Articles, MarkdownToHtmlConverter):
@@ -130,7 +130,7 @@ class Toy(Articles, MarkdownToHtmlConverter):
                     )
                     self.random_wait()
                     h1 = self.page.locator("div[contenteditable=true] h1").first
-                    if h1.is_visible(timeout=1000):
+                    if h1.is_visible():
                         title = h1.inner_text()
                         h1.evaluate("element => element.remove()")
                     else:
