@@ -41,16 +41,25 @@ class Toy(Base):
         if 上传图片数量 > 20:
             上传图片数量 = 20
         for file in self.files:
+            if self.stop_event.is_set():
+                break
+            self.pause_event.wait()
             dir_path, file_name = os.path.split(file)
             file_name_without_ext, file_ext = os.path.splitext(file_name)
             if file_ext != ".txt":
                 continue
             images = [file for file in os.listdir(dir_path) if os.path.splitext(file)[1] in [".jpg", ".png", ".jpeg"]]
             images = natsorted(images)
+            if len(images) == 0:
+                logger.warning(f"没有找到图片文件: {file}")
+                self.result_table_view.append([file_name_without_ext, "失败", "没有找到图片文件"])
+                continue
             image_media_ids = []
             if len(images) < 上传图片数量:
-                上传图片数量 = len(images)
-            for image in images[:上传图片数量]:
+                上传图片数量_本文 = len(images)
+            else:
+                上传图片数量_本文 = 上传图片数量
+            for image in images[:上传图片数量_本文]:
                 image_path = os.path.join(dir_path, image)
                 image_media_id = wechat_api.add_image_material(image_path)
                 image_media_ids.append({"image_media_id": image_media_id})
@@ -76,6 +85,7 @@ class Toy(Base):
                 }
             }])
             if "errmsg" in res:
+                logger.exception(f"上传文章失败: {res['errmsg']}", exc_info=True)
                 self.result_table_view.append([title, "失败", res["errmsg"]])
                 continue
             self.result_table_view.append([title, "成功", ""])
