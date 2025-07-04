@@ -5,7 +5,7 @@ import os
 import shutil
 from natsort import natsorted
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 
 class Toy(Base):
@@ -55,15 +55,16 @@ class Toy(Base):
                 image_media_id = wechat_api.add_image_material(image_path)
                 image_media_ids.append({"image_media_id": image_media_id})
             with open(file, "r", encoding="utf-8") as f:
-                content = f.read()
+                file_content = f.read()
             if txt首行是标题:
-                title, content = content.split("内容:", 1)
-                title = content.strip().strip("标题:")
-                content = content.strip()
-                if not content:
-                    self.result_table_view.append([title, "失败", "txt内容为空"])
+                file_content = file_content.replace("内容:", "内容：").replace("标题:", "标题：")
+                file_content_split = file_content.split("内容：", 1)
+                title = file_content_split[0].lstrip("标题：").strip()
+                content = file_content_split[1]
             else:
                 title = file_name_without_ext
+                content = file_content
+            content = content.strip()
             res = wechat_api.save_draft([{
                 "article_type": "newspic",
                 "title": title,
