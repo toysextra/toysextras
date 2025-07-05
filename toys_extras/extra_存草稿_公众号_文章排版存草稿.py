@@ -8,7 +8,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -56,6 +56,9 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
 
         是否存稿 = True if self.config.get("扩展", "是否存稿 -- 填是或否，仅选择md文件时生效") == "是" else False
         多篇合一 = True if self.config.get("扩展", "多篇合一 -- 编辑页新建消息") == "是" else False
+        作者 = self.config.get("扩展", "作者")
+        原创声明 = self.config.get("扩展", "原创声明 -- 填写文字原创或者不声明")
+        留言开关 = True if self.config.get("扩展", "留言开关 -- 填写开启或者不开启") == "开启" else False
         封面图序号 = self.config.get("扩展", "封面图序号 -- 从1开始，注意排版引导图片也包括在内")
         封面图序号 = int(封面图序号) if 封面图序号.isdigit() else None
         合集 = self.config.get("扩展", "合集")
@@ -212,13 +215,26 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 else:
                     title = file_name_without_ext
                 popup.get_by_placeholder("请在这里输入标题").fill(title)
-                # 选择封面
+                if 作者:
+                    popup.locator("#author").fill(作者)
                 if 封面图序号 is not None:
                     popup.locator(".select-cover__btn").click()
                     popup.locator("li", has_text="从正文选择").locator("visible=true").click()
                     popup.locator(".appmsg_content_img_item").nth(封面图序号 - 1).click()
                     popup.get_by_role("button", name="下一步").click()
                     popup.get_by_role("button", name="确认").click()
+                    self.random_wait()
+                if 原创声明 and 原创声明 != "不声明":
+                    popup.locator("#js_original .js_original_type").locator("visible=true").click()
+                    popup.locator(".original_agreement").click(position={"x": 5, "y": 5})
+                    self.random_wait()
+                    popup.get_by_role("button", name="确定").click()
+                    self.random_wait()
+                if not 留言开关:
+                    popup.locator("#js_comment_and_fansmsg_area").click()
+                    popup.locator(".weui-desktop-form__check-label", has_text="不开启").locator("visible=true").click()
+                    self.random_wait()
+                    popup.get_by_role("button", name="确定").click()
                     self.random_wait()
                 if 合集:
                     popup.locator("#js_article_tags_area .js_article_tags_label").click()
