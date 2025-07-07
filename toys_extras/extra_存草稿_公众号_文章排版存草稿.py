@@ -8,7 +8,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -59,8 +59,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         作者 = self.config.get("扩展", "作者")
         原创声明 = self.config.get("扩展", "原创声明 -- 填写文字原创或者不声明")
         留言开关 = True if self.config.get("扩展", "留言开关 -- 填写开启或者不开启") == "开启" else False
-        封面图序号 = self.config.get("扩展", "封面图序号 -- 从1开始，注意排版引导图片也包括在内")
-        封面图序号 = int(封面图序号) if 封面图序号.isdigit() else None
+        封面图 = self.config.get("扩展", "封面图 -- 可填序号或文件夹，如填序号则从1开始，注意排版引导图片也包括在内")
         合集 = self.config.get("扩展", "合集")
         创作来源 = self.config.get("扩展", "创作来源")
         平台推荐 = self.config.get("扩展", "平台推荐")
@@ -217,10 +216,30 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 popup.get_by_placeholder("请在这里输入标题").fill(title)
                 if 作者:
                     popup.locator("#author").fill(作者)
-                if 封面图序号 is not None:
+                if 封面图:
+                    if not os.path.exists(封面图) and not 封面图.isdigit():
+                        logger.warning(f"封面图 {封面图} 不存在")
+                        line[1] = "失败"
+                        line[2] = f"封面图 {封面图} 不存在"
+                        continue
                     popup.locator(".select-cover__btn").click()
-                    popup.locator("li", has_text="从正文选择").locator("visible=true").click()
-                    popup.locator(".appmsg_content_img_item").nth(封面图序号 - 1).click()
+                    if 封面图.isdigit():
+                        popup.locator("li", has_text="从正文选择").locator("visible=true").click()
+                        popup.locator(".appmsg_content_img_item").nth(int(封面图) - 1).click()
+                    else:
+                        if os.path.isdir(封面图):
+                            files_in_cover_dir = os.listdir(封面图)
+                            cover_images = [os.path.join(封面图, f) for f in files_in_cover_dir if f.endswith(('.jpg', '.png', '.jpeg'))]
+                            cover_image = random.choice(cover_images)
+                        else:
+                            cover_image = 封面图
+                        popup.locator("li", has_text="从图片库选择").locator("visible=true").last.click()
+                        with popup.expect_file_chooser() as fc:
+                            popup.locator(".js_upload_btn_container", has_text="上传文件").locator("visible=true").click()
+                        fc = fc.value
+                        fc.set_files([cover_image])
+                        popup.get_by_text("上传成功").wait_for()
+                        self.random_wait()
                     popup.get_by_role("button", name="下一步").click()
                     popup.get_by_role("button", name="确认").click()
                     self.random_wait()
