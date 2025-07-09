@@ -7,7 +7,7 @@ import pathlib
 import random
 import requests
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 
 class Toy(Base, MarkdownToHtmlConverter):
@@ -106,7 +106,8 @@ class Toy(Base, MarkdownToHtmlConverter):
                         else:
                             if not 公众号已设置:
                                 logger.warning(f"公众号未设置，无法上传图片，请在配置文件中设置appid和secret")
-                                self.result_table_view.append([file, "失败", f"公众号登录失败:{self.access_token}"])
+                                line[1] = "失败"
+                                line[2] = f"公众号未设置，无法上传图片，请在配置文件中设置appid和secret"
                                 continue
                             if self.upload_image_client is None:
                                 self.upload_image_client = wechat_api.upload_article_image
