@@ -248,8 +248,15 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                     self.random_wait()
                 if 原创声明 and 原创声明 != "不声明":
                     popup.locator("#js_original .js_original_type").locator("visible=true").click()
-                    popup.locator(".original_agreement").click(position={"x": 5, "y": 5})
-                    self.random_wait()
+                    popup.locator(".original_agreement").wait_for()
+                    is_checked = popup.evaluate('''() => {
+                      const i = document.querySelector('i.weui-desktop-icon-checkbox');
+                      return window.getComputedStyle(i, '::before').content;
+                    }''')
+                    if is_checked == "none":
+                        print("原创声明未勾选")
+                        popup.locator(".original_agreement label").click(position={"x": 10, "y": 10})
+                        self.random_wait()
                     popup.get_by_role("button", name="确定").click()
                     self.random_wait()
                 if not 留言开关:
