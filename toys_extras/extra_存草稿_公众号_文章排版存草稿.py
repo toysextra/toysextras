@@ -8,7 +8,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -120,12 +120,14 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 self.result_table_view.append([file_name, "待处理", "", file, ""])
 
         last_main_article = ""
-        for line in self.result_table_view[1:]:
+        lines = self.result_table_view[1:]
+        total_count = len(lines)
+        for index, line in enumerate(lines):
             if self.stop_event.is_set():
                 break
             self.pause_event.wait()
 
-            if line[4] != last_main_article and popup is not None:
+            if (line[4] != last_main_article or not 多篇合一) and popup is not None :
                 popup.close()
 
             line[1] = "处理中"
@@ -203,8 +205,9 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         self.random_wait(200, 400)
                         popup.locator('.js_create_article[title="写新图文"]').click()
                     self.random_wait()
-                    popup.locator("div[contenteditable=true]", has_text="从这里开始写正文").last.evaluate(
-                        "element => element.innerHTML = `{}`".format(file_content)
+                    popup.locator("div[contenteditable=true]:visible").evaluate(
+                        "(element, html) => { element.innerHTML = html }",
+                        file_content
                     )
                 self.random_wait()
                 h1 = popup.locator("#ueditor_0 div[contenteditable=true] h1").first
@@ -267,17 +270,29 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 if 平台推荐 and 平台推荐 != "已开启":
                     popup.locator("#js_not_recommend_area .js_not_recommend_desc").click()
                     popup.locator(".weui-desktop-form__check-label[for^=not_recomment]", has_text=平台推荐).click()
-                popup.get_by_role("button", name="保存为草稿").click()
-                try:
-                    popup.locator("#js_save_success").get_by_text("已保存", exact=True).locator("visible=true").wait_for(state="attached", timeout=5000)
-                except Exception as e:
-                    logger.exception(e)
-                    line[1] = "可能失败,请手动检查"
-                    line[2] = "未识别到保存草稿成功提示"
-                    continue
-                if 完成后移动文件到指定文件夹:
-                    self.move_to_done(完成后移动文件到指定文件夹, dir_name, file)
-                line[1] = "存稿成功"
+                is_last_in_group = (
+                        多篇合一 and
+                        (index == total_count - 1 or lines[index + 1][4] != line[4])
+                )
+                if not 多篇合一 or (多篇合一 and is_last_in_group):
+                    popup.get_by_role("button", name="保存为草稿").click()
+                    try:
+                        popup.locator("#js_save_success").get_by_text("已保存", exact=True).locator("visible=true").wait_for(state="attached", timeout=5000)
+                    except Exception as e:
+                        logger.exception(e)
+                        line[1] = "可能失败,请手动检查"
+                        line[2] = "未识别到保存草稿成功提示"
+                        continue
+                    if 多篇合一:
+                        for l in lines:
+                            if l[4] == line[4]:
+                                l[1] = "存稿成功"
+                    else:
+                        line[1] = "存稿成功"
+                    if 完成后移动文件到指定文件夹:
+                        self.move_to_done(完成后移动文件到指定文件夹, dir_name, file)
+                else:
+                    line[1] = "已编辑"
             except Exception as e:
                 logger.exception(f"处理文件 {file} 失败: {e}")
                 line[1] = "失败"
