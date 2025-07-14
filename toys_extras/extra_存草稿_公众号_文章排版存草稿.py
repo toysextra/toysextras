@@ -4,11 +4,12 @@ from toys_logger import logger
 from toys_utils import MarkdownToHtmlConverter, insert_image_link_to_markdown
 import os
 import random
+import shutil
 from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -254,7 +255,6 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                       return window.getComputedStyle(i, '::before').content;
                     }''')
                     if is_checked == "none":
-                        print("原创声明未勾选")
                         popup.locator(".original_agreement label").click(position={"x": 10, "y": 10})
                         self.random_wait()
                     popup.get_by_role("button", name="确定").click()
@@ -291,13 +291,32 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         line[2] = "未识别到保存草稿成功提示"
                         continue
                     if 多篇合一:
+                        need_to_move_files = []
                         for l in lines:
                             if l[4] == line[4]:
                                 l[1] = "存稿成功"
+                                need_to_move_files.append(l[3])
+                        if 完成后移动文件到指定文件夹:
+                            parent_dirs = set(os.path.dirname(f) for f in need_to_move_files)
+                            if len(parent_dirs) == 1:
+                                # 所有文件都在同一目录下
+                                if dir_name == self.file_path:
+                                    for f_to_move in need_to_move_files:
+                                        shutil.move(f_to_move, 完成后移动文件到指定文件夹) # type: ignore
+                                else:
+                                    shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, os.path.basename(dir_name)))  # type: ignore
+                            else:
+                                grand_parent_dir = os.path.dirname(dir_name)
+                                if grand_parent_dir == self.file_path:
+                                    for f_to_move in need_to_move_files:
+                                        parent_dir = os.path.dirname(f_to_move)
+                                        shutil.move(parent_dir, os.path.join(完成后移动文件到指定文件夹, os.path.basename(parent_dir)))  # type: ignore
+                                else:
+                                    shutil.move(grand_parent_dir, os.path.join(完成后移动文件到指定文件夹, os.path.basename(grand_parent_dir)))  # type: ignore
                     else:
                         line[1] = "存稿成功"
-                    if 完成后移动文件到指定文件夹:
-                        self.move_to_done(完成后移动文件到指定文件夹, dir_name, file)
+                        if 完成后移动文件到指定文件夹:
+                            self.move_to_done(完成后移动文件到指定文件夹, dir_name, file)
                 else:
                     line[1] = "已编辑"
             except Exception as e:
