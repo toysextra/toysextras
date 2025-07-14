@@ -1,11 +1,12 @@
 import os
 import shutil
+import random
 from toys_extras.base import Base
 from toys_logger import logger
 from natsort import natsorted
 
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 
 class Toy(Base):
@@ -17,12 +18,17 @@ class Toy(Base):
     def play(self):
         目标目录 = self.config.get("扩展", "目标目录")
         每个子目录包含的项目数量 = self.config.getint("扩展", "每个子目录包含的项目数量")
-        子目录前缀 = self.config.get("扩展", "子目录前缀")
+        子目录前缀 = self.config.get("扩展", "子目录前缀 -- 如需自动创建目录，则填此项")
+        打乱顺序 = True if self.config.get("扩展", "打乱顺序") == "是" else False
         if not self.file_path:
             return
-        files = natsorted([os.path.join(self.file_path, i) for i in os.listdir(self.file_path)])
-        if not files:
+        if not self.files:
             return
+        if 打乱顺序:
+            random.shuffle(self.files)
+            files = self.files
+        else:
+            files = natsorted([os.path.join(self.file_path, i) for i in os.listdir(self.file_path)])
         if 子目录前缀:
             子目录列表 = [os.path.join(目标目录, f"{子目录前缀}_{i}") for i in range(1, 3000)]
         else:
@@ -31,9 +37,7 @@ class Toy(Base):
                 for i in os.listdir(目标目录)
                 if os.path.isdir(os.path.join(目标目录, i))
             ])
-        print(子目录列表)
         for batch_num, i in enumerate(range(0, len(files), 每个子目录包含的项目数量)):
-            print(f"正在处理第 {batch_num+1} 个子目录")
             batch = files[i:i + 每个子目录包含的项目数量]
             if batch_num >= len(子目录列表):
                 break
@@ -42,7 +46,6 @@ class Toy(Base):
                 os.makedirs(target_dir)
             for item in batch:
                 try:
-                    print(f"移动 {item} 到 {target_dir}")
                     dest = os.path.join(target_dir, os.path.basename(item))
                     shutil.move(item, dest)
                 except Exception as e:
