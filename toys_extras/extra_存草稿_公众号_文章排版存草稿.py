@@ -284,8 +284,15 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 )
                 if not 多篇合一 or (多篇合一 and is_last_in_group):
                     popup.get_by_role("button", name="保存为草稿").click()
+                    success_locator = popup.locator("#js_save_success").get_by_text("已保存", exact=True).locator(
+                        "visible=true")
+                    saving_locator = popup.get_by_text("已有流程保存中，请稍后再试").locator("visible=true")
                     try:
-                        popup.locator("#js_save_success").get_by_text("已保存", exact=True).locator("visible=true").wait_for(state="attached", timeout=5000)
+                        success_locator.or_(saving_locator).wait_for(state="attached", timeout=5000)
+                        if saving_locator.is_visible():
+                            popup.locator(".auto_save_container").get_by_text("已保存").wait_for(timeout=30_000)
+                            popup.get_by_role("button", name="保存为草稿").click()
+                            success_locator.wait_for(state="attached", timeout=5000)
                     except Exception as e:
                         logger.exception(e)
                         line[1] = "可能失败,请手动检查"
