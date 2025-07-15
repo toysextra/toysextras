@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -148,6 +148,8 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         popup = popup_info.value
                     else:
                         popup.bring_to_front()
+                        if popup.locator(".weui-desktop-dialog").locator("visible=true").first.is_visible():
+                            popup.locator(".weui-desktop-dialog__close-btn").locator("visible=true").first.click()
                         popup.locator("#js_add_appmsg").click()
                         self.random_wait(200, 400)
                         popup.locator('.js_create_article[title="写新图文"]').click()
@@ -240,12 +242,16 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                             cover_image = 封面图
                         popup.locator("li", has_text="从图片库选择").locator("visible=true").last.click()
                         with popup.expect_file_chooser() as fc:
+                            self.random_wait()
                             popup.locator(".js_upload_btn_container", has_text="上传文件").locator("visible=true").click()
                         fc = fc.value
                         fc.set_files([cover_image])
                         popup.get_by_text("上传成功").wait_for()
                         self.random_wait()
-                    popup.get_by_role("button", name="下一步").click()
+                    next_btn = popup.locator(".weui-desktop-btn", has_text="下一步")
+                    while "btn_disabled" in next_btn.get_attribute("class"):
+                        self.random_wait()
+                    next_btn.click()
                     popup.get_by_role("button", name="确认").click()
                     self.random_wait()
                 if 原创声明 and 原创声明 != "不声明":
