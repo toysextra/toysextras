@@ -227,6 +227,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         line[2] = f"封面图 {封面图} 不存在"
                         continue
                     popup.locator(".select-cover__btn").click()
+                    self.random_wait()
                     if 封面图.isdigit():
                         popup.locator("li", has_text="从正文选择").locator("visible=true").click()
                         popup.locator(".appmsg_content_img_item").nth(int(封面图) - 1).click()
@@ -268,7 +269,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 if 合集:
                     popup.locator("#js_article_tags_area .js_article_tags_label").click()
                     popup.get_by_placeholder("请选择合集").fill(合集)
-                    popup.locator(".select-opt-li", has_text=合集).click()
+                    popup.locator(".select-opt-li", has_text=合集).first.click()
                     self.random_wait()
                     popup.get_by_role("button", name="确认").click()
                 if 创作来源 and 创作来源 != "不声明":
