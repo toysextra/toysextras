@@ -6,7 +6,7 @@ from toys_logger import logger
 from natsort import natsorted
 
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 
 class Toy(Base):
@@ -24,11 +24,11 @@ class Toy(Base):
             return
         if not self.files:
             return
+        files = [os.path.join(self.file_path, i) for i in os.listdir(self.file_path)]
         if 打乱顺序:
-            random.shuffle(self.files)
-            files = self.files
+            random.shuffle(files)
         else:
-            files = natsorted([os.path.join(self.file_path, i) for i in os.listdir(self.file_path)])
+            files = natsorted(files)
         if 子目录前缀:
             子目录列表 = [os.path.join(目标目录, f"{子目录前缀}_{i}") for i in range(1, 3000)]
         else:
