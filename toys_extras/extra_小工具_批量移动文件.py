@@ -22,8 +22,6 @@ class Toy(Base):
         打乱顺序 = True if self.config.get("扩展", "打乱顺序") == "是" else False
         if not self.file_path:
             return
-        if not self.files:
-            return
         files = [os.path.join(self.file_path, i) for i in os.listdir(self.file_path)]
         if 打乱顺序:
             random.shuffle(files)
