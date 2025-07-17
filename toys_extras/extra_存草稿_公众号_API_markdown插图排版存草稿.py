@@ -2,12 +2,14 @@ from toys_extras.base import Base
 from toys_logger import logger
 from toys_utils import WeChatAPI, ToyError, insert_image_link_to_markdown, MarkdownToHtmlConverter
 import re
+from natsort import natsorted
 import os
-import pathlib
+from pathlib import Path
 import random
+import shutil
 import requests
 
-__version__ = "1.1.3"
+__version__ = "1.1.4"
 
 
 class Toy(Base, MarkdownToHtmlConverter):
@@ -17,7 +19,7 @@ class Toy(Base, MarkdownToHtmlConverter):
         MarkdownToHtmlConverter.__init__(self)
         self.access_token = ""
         self.image_url_prefix = "mmbiz.qpic.cn"
-        self.result_table_view: list = [['文章名称', '状态', '错误信息', '文档路径']]
+        self.result_table_view: list = [['文章名称', '状态', '错误信息', '文档路径', "多篇合一主篇"]]
 
     def upload_image(self, image_path):
         return self.upload_image_client(image_path)
@@ -29,22 +31,36 @@ class Toy(Base, MarkdownToHtmlConverter):
 
     @staticmethod
     def get_default_thumb():
-        return os.path.join(pathlib.Path(__file__).parent.parent, "toys_extras_resource", "存草稿_公众号_API_markdown插图排版存草稿", "默认缩略图.png")
+        return os.path.join(Path(__file__).parent.parent, "toys_extras_resource", "存草稿_公众号_API_markdown插图排版存草稿", "默认缩略图.png")
 
     def get_html_h1(self, html_content):
         return re.findall(r'<h1>(.*?)</h1>', html_content, re.DOTALL)
 
     def play(self):
+        
+        if not self.file_path:
+            return
+
+        if os.path.isdir(self.file_path):
+            base_dir = Path(self.file_path)
+        elif os.path.isfile(self.file_path):
+            base_dir = Path(self.file_path).parent
+        elif os.path.isfile(self.file_path.split(",")[0]):
+            base_dir = Path(self.file_path.split(",")[0]).parent
+        else:
+            return
+        
         是否存稿 = self.config.get("扩展", "是否存稿 -- 填是或否，仅选择md文件时生效") == "是"
+        多篇合一 = True if self.config.get("扩展", "多篇合一 -- 编辑页新建消息") == "是" else False
         appid = self.config.get("扩展", "appid")
         secret = self.config.get("扩展", "secret")
         封面图序号 = self.config.get("扩展", "封面图序号 -- 从1开始，注意排版引导图片也包括在内")
         封面图序号 = int(封面图序号) if 封面图序号.isdigit() else 1
         指定图片链接 = self.config.get("扩展", "指定图片链接 -- 包含图片链接的txt文件，每行一个，不填则使用md文件同目录图片")
-        插图数量 = self.config.getint("扩展", "插图数量")
+        插图数量 = self.config.get("扩展", "插图数量")
         插图位置 = self.config.get("扩展", "插图位置 -- 不填时图片均匀插入文章，填写格式'1,5,7'")
-        图片最小宽度 = self.config.getint("扩展", "图片最小宽度")
-        图片最小高度 = self.config.getint("扩展", "图片最小高度")
+        图片最小宽度 = self.config.get("扩展", "图片最小宽度")
+        图片最小高度 = self.config.get("扩展", "图片最小高度")
         输出文件格式 = "txt" if self.config.get("扩展", "输出文件格式 -- 可填txt或html") not in ["txt", "html"] else self.config.get("扩展", "输出文件格式 -- 可填txt或html")
         排版输出目录 = self.config.get("扩展", "排版输出目录")
         完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动文件到指定文件夹")
@@ -53,6 +69,21 @@ class Toy(Base, MarkdownToHtmlConverter):
         if not 排版输出目录 and not 是否存稿:
             logger.warning(f"排版输出目录和是否存稿都未开启，无法进行排版操作")
             return
+
+        if 插图数量 and 插图数量.isdigit():
+            插图数量 = int(插图数量)
+        else:
+            插图数量 = 0
+
+        if 图片最小宽度 and 图片最小宽度.isdigit():
+            图片最小宽度 = int(图片最小宽度)
+        else:
+            图片最小宽度 = 0
+
+        if 图片最小高度 and 图片最小高度.isdigit():
+            图片最小高度 = int(图片最小高度)
+        else:
+            图片最小高度 = 0
 
         specified_image_links = []
         if os.path.isfile(指定图片链接):
@@ -74,11 +105,46 @@ class Toy(Base, MarkdownToHtmlConverter):
                 logger.warning(f"获取access_token失败: {e}")
                 raise ToyError("登录公众号失败，请检查网络或代理")
             公众号已设置 = not wechat_api.access_token.startswith("登录公众号失败:")
-        for file in self.files:
-            file_name = os.path.basename(file)
-            self.result_table_view.append([file_name, "待处理", "", file])
+        if not 公众号已设置 and ((插图数量 and not specified_image_links) or 是否存稿):
+            self.result_table_view.append(["全部文章", "失败", f"公众号登录失败，无法存稿及上传图片排版，请检查appid、secret或IP是否在白名单", ""])
+            return
+        
+        groups = {}
+        if 多篇合一:
+            for file in self.files:
+                file_path = Path(file)
+                relative_path = file_path.relative_to(base_dir)
+                if len(relative_path.parts) == 1:
+                    groups.setdefault(base_dir, set()).add(file)
+                elif len(relative_path.parts) == 2:
+                    file_suffix = {os.path.splitext(f)[1] for f in os.listdir(file_path.parent)}
+                    if len(file_suffix) == 1:
+                        groups.setdefault(file_path.parent, set()).add(file)
+                    else:
+                        groups.setdefault(base_dir, set()).add(file)
+                elif len(relative_path.parts) == 3:
+                    groups.setdefault(file_path.parent.parent, set()).add(file)
+                else:
+                    logger.warning(f"文件 {file} 路径层级过深，无法识别")
+                    return
+            if groups:
+                for group_dir, files in groups.items():
+                    files = natsorted(list(files))
+                    main_article = os.path.basename(files[0])
+                    for file in files:
+                        file_name = os.path.basename(file)
+                        self.result_table_view.append([file_name, "待处理", "", file, main_article])
+        else:
+            for file in self.files:
+                file_name = os.path.basename(file)
+                self.result_table_view.append([file_name, "待处理", "", file, ""])
+
         default_thumb = ""
-        for line in self.result_table_view[1:]:
+        last_main_article = ""
+        lines = self.result_table_view[1:]
+        total_count = len(lines)
+        articles = []
+        for index, line in enumerate(lines):
             if self.stop_event.is_set():
                 break
             self.pause_event.wait()
@@ -104,11 +170,6 @@ class Toy(Base, MarkdownToHtmlConverter):
                         if specified_image_links:
                             image_urls = random.sample(specified_image_links, k=插图数量)
                         else:
-                            if not 公众号已设置:
-                                logger.warning(f"公众号未设置，无法上传图片，请在配置文件中设置appid和secret")
-                                line[1] = "失败"
-                                line[2] = f"公众号未设置，无法上传图片，请在配置文件中设置appid和secret"
-                                continue
                             if self.upload_image_client is None:
                                 self.upload_image_client = wechat_api.upload_article_image
                             image_urls = self.get_available_images(dir_name, num=插图数量, min_width=图片最小宽度, min_height=图片最小高度)
@@ -153,18 +214,60 @@ class Toy(Base, MarkdownToHtmlConverter):
                     title = file_name_without_ext
                 else:
                     title = title[0]
-                res = wechat_api.save_draft([{
+                articles.append({
                     "title": title,
                     "content": file_content,
                     "thumb_media_id": thumb
-                }])
-                if "errmsg" in res:
-                    line[1] = "失败"
-                    line[2] = f"保存草稿失败:{res['errmsg']}"
+                })
+
+                is_last_in_group = (
+                        多篇合一 and
+                        (index == total_count - 1 or lines[index + 1][4] != line[4])
+                )
+                if not 多篇合一 or (多篇合一 and is_last_in_group):
+                    res = wechat_api.save_draft(articles)
+                    save_draft_msg = ""
+                    if "errmsg" in res:
+                        save_draft_status = "失败"
+                        save_draft_msg = f"保存草稿失败:{res['errmsg']}"
+                    else:
+                        save_draft_status = "存稿成功"
+                    if 多篇合一:
+                        need_to_move_files = []
+                        for l in lines:
+                            if l[4] == line[4]:
+                                l[1] = save_draft_status
+                                l[2] = save_draft_msg
+                                need_to_move_files.append(l[3])
+                        if save_draft_status == "存稿成功" and 完成后移动文件到指定文件夹:
+                            parent_dirs = set(os.path.dirname(f) for f in need_to_move_files)
+                            if len(parent_dirs) == 1:
+                                # 所有文件都在同一目录下
+                                if dir_name == self.file_path:
+                                    for f_to_move in need_to_move_files:
+                                        shutil.move(f_to_move, 完成后移动文件到指定文件夹) # type: ignore
+                                else:
+                                    shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, os.path.basename(dir_name)))  # type: ignore
+                            else:
+                                grand_parent_dir = os.path.dirname(dir_name)
+                                if grand_parent_dir == self.file_path:
+                                    for f_to_move in need_to_move_files:
+                                        parent_dir = os.path.dirname(f_to_move)
+                                        shutil.move(parent_dir, os.path.join(完成后移动文件到指定文件夹, os.path.basename(parent_dir)))  # type: ignore
+                                else:
+                                    shutil.move(grand_parent_dir, os.path.join(完成后移动文件到指定文件夹, os.path.basename(grand_parent_dir)))  # type: ignore
+                    else:
+                        line[1] = save_draft_status
+                        line[2] = save_draft_msg
+                        if save_draft_status == "存稿成功" and 完成后移动文件到指定文件夹:
+                            self.move_to_done(完成后移动文件到指定文件夹, dir_name, file)
+                    articles.clear()
                 else:
-                    line[1] = "存稿成功"
-                    if 完成后移动文件到指定文件夹:
-                        self.move_to_done(完成后移动文件到指定文件夹, dir_name, file)
+                    line[1] = "已排版，待存稿"
             except Exception as e:
                 line[1] = "失败"
                 line[2] = f"{e}"
+                logger.exception(f"处理文件{line[0]}失败", exc_info=e)
+            finally:
+                if line[4] != last_main_article:
+                    last_main_article = line[4]
