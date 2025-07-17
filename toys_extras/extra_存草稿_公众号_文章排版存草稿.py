@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -65,13 +65,44 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         创作来源 = self.config.get("扩展", "创作来源")
         平台推荐 = self.config.get("扩展", "平台推荐")
         指定图片链接 = self.config.get("扩展", "指定图片链接 -- 包含图片链接的txt文件，每行一个，不填则使用md文件同目录图片")
-        插图数量 = self.config.getint("扩展", "插图数量")
+        插图数量 = self.config.get("扩展", "插图数量")
         插图位置 = self.config.get("扩展", "插图位置 -- 不填时图片均匀插入文章，填写格式'1,5,7'")
-        图片最小宽度 = self.config.getint("扩展", "图片最小宽度")
-        图片最小高度 = self.config.getint("扩展", "图片最小高度")
+        图片最小宽度 = self.config.get("扩展", "图片最小宽度")
+        图片最小高度 = self.config.get("扩展", "图片最小高度")
+        话题数量 = self.config.get("扩展", "话题数量 -- 话题数量小于话题个数时，将会随机抽取")
+        话题 = self.config.get("扩展", "话题 -- 多个话题用英文逗号隔开，使用此功能排版时生效")
         输出文件格式 = "txt" if self.config.get("扩展", "输出文件格式 -- 可填txt或html") not in ["txt", "html"] else self.config.get("扩展", "输出文件格式 -- 可填txt或html")
         排版输出目录 = self.config.get("扩展", "排版输出目录")
         完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动文件到指定文件夹")
+
+        if 插图数量 and 插图数量.isdigit():
+            插图数量 = int(插图数量)
+        else:
+            插图数量 = 0
+
+        if 图片最小宽度 and 图片最小宽度.isdigit():
+            图片最小宽度 = int(图片最小宽度)
+        else:
+            图片最小宽度 = 0
+
+        if 图片最小高度 and 图片最小高度.isdigit():
+            图片最小高度 = int(图片最小高度)
+        else:
+            图片最小高度 = 0
+
+        if 话题数量 and 话题数量.isdigit():
+            话题数量 = int(话题数量)
+        else:
+            话题数量 = 0
+
+        if 话题:
+            话题 = [x.strip() for x in 话题.split(",")]
+        else:
+            话题 = []
+
+        topics = None
+        if 话题数量 or 话题:
+            topics = {"type": "wx", "num": 话题数量, "tags": 话题}
 
         specified_image_links = []
         if os.path.isfile(指定图片链接):
@@ -81,14 +112,15 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
 
         context = self.page.context
 
-        # 公众号首页
-        page_home = context.new_page()
-        page_home.goto(self.url)
-        page_home.locator('[title="公众号"]').wait_for()
-        if page_home.locator("a", has_text="登录").is_visible():
-            page_home.locator("a", has_text="登录").click()
+        page_home, popup = None, None
 
-        popup = None
+        # 公众号首页
+        if (插图数量 and not specified_image_links) or 是否存稿:
+            page_home = context.new_page()
+            page_home.goto(self.url)
+            page_home.locator('[title="公众号"]').wait_for()
+            if page_home.locator("a", has_text="登录").is_visible():
+                page_home.locator("a", has_text="登录").click()
 
         groups = {}
         if 多篇合一:
@@ -183,7 +215,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                             if image_urls:
                                 file_content = insert_image_link_to_markdown(file_content, image_urls, positions)
 
-                        file_content = self.article_convert(file_content, random.choice(template_dirs))
+                        file_content = self.article_convert(file_content, random.choice(template_dirs), topics=topics)
 
                         if 排版输出目录:
                             is_exist = os.path.exists(排版输出目录)
@@ -297,8 +329,12 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         success_locator.or_(saving_locator).wait_for(state="attached", timeout=5000)
                         if saving_locator.is_visible():
                             popup.locator(".auto_save_container").get_by_text("已保存").wait_for(timeout=30_000)
+                            self.random_wait(1000, 2000)
                             popup.get_by_role("button", name="保存为草稿").click()
-                            success_locator.wait_for(state="attached", timeout=5000)
+                            try:
+                                success_locator.wait_for(state="attached", timeout=5_000)
+                            except Exception as e:
+                                pass
                     except Exception as e:
                         logger.exception(e)
                         line[1] = "可能失败,请手动检查"
@@ -342,5 +378,6 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                     last_main_article = line[4]
         if popup is not None:
             popup.close()
-        page_home.close()
+        if page_home is not None:
+            page_home.close()
         self.page.close()
