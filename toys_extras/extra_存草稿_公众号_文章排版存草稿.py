@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.7"
+__version__ = "1.0.8"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -251,7 +251,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                     h1.evaluate("element => element.remove()")
                 else:
                     title = file_name_without_ext
-                popup.get_by_placeholder("请在这里输入标题").fill(title)
+                popup.get_by_placeholder("请在这里输入标题").fill(title[:64])
                 if 作者:
                     popup.locator("#author").fill(作者)
                 if 封面图:
