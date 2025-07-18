@@ -9,7 +9,7 @@ import random
 import shutil
 import requests
 
-__version__ = "1.1.4"
+__version__ = "1.1.5"
 
 
 class Toy(Base, MarkdownToHtmlConverter):
@@ -37,10 +37,8 @@ class Toy(Base, MarkdownToHtmlConverter):
         return re.findall(r'<h1>(.*?)</h1>', html_content, re.DOTALL)
 
     def play(self):
-        
         if not self.file_path:
             return
-
         if os.path.isdir(self.file_path):
             base_dir = Path(self.file_path)
         elif os.path.isfile(self.file_path):
@@ -49,7 +47,7 @@ class Toy(Base, MarkdownToHtmlConverter):
             base_dir = Path(self.file_path.split(",")[0]).parent
         else:
             return
-        
+
         是否存稿 = self.config.get("扩展", "是否存稿 -- 填是或否，仅选择md文件时生效") == "是"
         多篇合一 = True if self.config.get("扩展", "多篇合一 -- 编辑页新建消息") == "是" else False
         appid = self.config.get("扩展", "appid")
@@ -215,7 +213,7 @@ class Toy(Base, MarkdownToHtmlConverter):
                 else:
                     title = title[0]
                 articles.append({
-                    "title": title,
+                    "title": title[:64],
                     "content": file_content,
                     "thumb_media_id": thumb
                 })
