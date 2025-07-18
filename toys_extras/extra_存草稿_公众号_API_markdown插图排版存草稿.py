@@ -52,6 +52,7 @@ class Toy(Base, MarkdownToHtmlConverter):
         多篇合一 = True if self.config.get("扩展", "多篇合一 -- 编辑页新建消息") == "是" else False
         appid = self.config.get("扩展", "appid")
         secret = self.config.get("扩展", "secret")
+        作者 = self.config.get("扩展", "作者")
         封面图序号 = self.config.get("扩展", "封面图序号 -- 从1开始，注意排版引导图片也包括在内")
         封面图序号 = int(封面图序号) if 封面图序号.isdigit() else 1
         指定图片链接 = self.config.get("扩展", "指定图片链接 -- 包含图片链接的txt文件，每行一个，不填则使用md文件同目录图片")
@@ -212,11 +213,16 @@ class Toy(Base, MarkdownToHtmlConverter):
                     title = file_name_without_ext
                 else:
                     title = title[0]
-                articles.append({
+                    
+                article = {
                     "title": title[:64],
                     "content": file_content,
                     "thumb_media_id": thumb
-                })
+                }
+                if 作者:
+                    article["author"] = 作者
+                
+                articles.append(article)
 
                 is_last_in_group = (
                         多篇合一 and
