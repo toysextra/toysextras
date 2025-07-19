@@ -7,7 +7,7 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 
 class Toy(BaseWeb):
@@ -49,8 +49,9 @@ class Toy(BaseWeb):
                 response = self.page.request.get(image_url)
                 if response.status == 200:
                     resource_picture = response.body()
-                    img_file_path = os.path.join(article_dir, f"图{image_index}.jpg")
                     image = Image.open(BytesIO(resource_picture))
+                    image_type = "gif" if image.format.lower() == "gif" else "jpg"
+                    img_file_path = os.path.join(article_dir, f"图{image_index}.{image_type}")
                     image.convert("RGB")
                     image.save(img_file_path)
                     image_index += 1
