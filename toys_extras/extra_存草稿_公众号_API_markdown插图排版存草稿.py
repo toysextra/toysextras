@@ -9,7 +9,7 @@ import random
 import shutil
 import requests
 
-__version__ = "1.1.5"
+__version__ = "1.1.6"
 
 
 class Toy(Base, MarkdownToHtmlConverter):
@@ -64,6 +64,8 @@ class Toy(Base, MarkdownToHtmlConverter):
         排版输出目录 = self.config.get("扩展", "排版输出目录")
         完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动文件到指定文件夹")
 
+        if 完成后移动文件到指定文件夹:
+            完成后移动文件到指定文件夹 = self.make_to_move_dir(完成后移动文件到指定文件夹)
 
         if not 排版输出目录 and not 是否存稿:
             logger.warning(f"排版输出目录和是否存稿都未开启，无法进行排版操作")
@@ -143,6 +145,7 @@ class Toy(Base, MarkdownToHtmlConverter):
         lines = self.result_table_view[1:]
         total_count = len(lines)
         articles = []
+
         for index, line in enumerate(lines):
             if self.stop_event.is_set():
                 break
@@ -213,7 +216,7 @@ class Toy(Base, MarkdownToHtmlConverter):
                     title = file_name_without_ext
                 else:
                     title = title[0]
-                    
+
                 article = {
                     "title": title[:64],
                     "content": file_content,
@@ -221,7 +224,7 @@ class Toy(Base, MarkdownToHtmlConverter):
                 }
                 if 作者:
                     article["author"] = 作者
-                
+
                 articles.append(article)
 
                 is_last_in_group = (
@@ -275,3 +278,8 @@ class Toy(Base, MarkdownToHtmlConverter):
             finally:
                 if line[4] != last_main_article:
                     last_main_article = line[4]
+        try:
+            if 完成后移动文件到指定文件夹:
+                os.rmdir(完成后移动文件到指定文件夹)
+        except OSError:
+            pass
