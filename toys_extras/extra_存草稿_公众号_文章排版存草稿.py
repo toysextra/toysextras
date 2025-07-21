@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.8"
+__version__ = "1.0.9"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -74,6 +74,9 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         输出文件格式 = "txt" if self.config.get("扩展", "输出文件格式 -- 可填txt或html") not in ["txt", "html"] else self.config.get("扩展", "输出文件格式 -- 可填txt或html")
         排版输出目录 = self.config.get("扩展", "排版输出目录")
         完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动文件到指定文件夹")
+
+        if 完成后移动文件到指定文件夹:
+            完成后移动文件到指定文件夹 = self.make_to_move_dir(完成后移动文件到指定文件夹)
 
         if 插图数量 and 插图数量.isdigit():
             插图数量 = int(插图数量)
@@ -376,6 +379,11 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
             finally:
                 if line[4] != last_main_article:
                     last_main_article = line[4]
+        try:
+            if 完成后移动文件到指定文件夹:
+                os.rmdir(完成后移动文件到指定文件夹)
+        except OSError:
+            pass
         if popup is not None:
             popup.close()
         if page_home is not None:
