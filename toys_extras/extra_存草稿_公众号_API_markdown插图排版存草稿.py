@@ -9,7 +9,7 @@ import random
 import shutil
 import requests
 
-__version__ = "1.1.6"
+__version__ = "1.1.7"
 
 
 class Toy(Base, MarkdownToHtmlConverter):
