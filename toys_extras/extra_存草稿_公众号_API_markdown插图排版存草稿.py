@@ -53,8 +53,7 @@ class Toy(Base, MarkdownToHtmlConverter):
         appid = self.config.get("扩展", "appid")
         secret = self.config.get("扩展", "secret")
         作者 = self.config.get("扩展", "作者")
-        封面图序号 = self.config.get("扩展", "封面图序号 -- 从1开始，注意排版引导图片也包括在内")
-        封面图序号 = int(封面图序号) if 封面图序号.isdigit() else 1
+        封面图 = self.config.get("扩展", "封面图 -- 可填序号或文件夹或包含素材id的txt文件，如填序号则从1开始，注意排版引导图片也包括在内")
         指定图片链接 = self.config.get("扩展", "指定图片链接 -- 包含图片链接的txt文件，每行一个，不填则使用md文件同目录图片")
         插图数量 = self.config.get("扩展", "插图数量")
         插图位置 = self.config.get("扩展", "插图位置 -- 不填时图片均匀插入文章，填写格式'1,5,7'")
@@ -69,7 +68,18 @@ class Toy(Base, MarkdownToHtmlConverter):
 
         if not 排版输出目录 and not 是否存稿:
             logger.warning(f"排版输出目录和是否存稿都未开启，无法进行排版操作")
+            self.result_table_view.append(["全部文章", "失败", f"排版输出目录和是否存稿都未开启，无法进行排版操作", "", ""])
             return
+        if not 封面图:
+            logger.warning(f"封面图未设置")
+            self.result_table_view.append(["全部文章", "失败", f"封面图未设置", "", ""])
+
+        if os.path.isdir(封面图):
+            files = os.listdir(封面图)
+            if not files:
+                logger.warning(f"封面图文件夹为空")
+                self.result_table_view.append(["全部文章", "失败", f"封面图文件夹为空", "", ""])
+                return
 
         if 插图数量 and 插图数量.isdigit():
             插图数量 = int(插图数量)
@@ -107,7 +117,7 @@ class Toy(Base, MarkdownToHtmlConverter):
                 raise ToyError("登录公众号失败，请检查网络或代理")
             公众号已设置 = not wechat_api.access_token.startswith("登录公众号失败:")
         if not 公众号已设置 and ((插图数量 and not specified_image_links) or 是否存稿):
-            self.result_table_view.append(["全部文章", "失败", f"公众号登录失败，无法存稿及上传图片排版，请检查appid、secret或IP是否在白名单", ""])
+            self.result_table_view.append(["全部文章", "失败", f"公众号登录失败，无法存稿及上传图片排版，请检查appid、secret或IP是否在白名单", "", ""])
             return
         
         groups = {}
@@ -194,19 +204,33 @@ class Toy(Base, MarkdownToHtmlConverter):
                             self.move_to_done(完成后移动文件到指定文件夹, dir_name, file)
                         line[1] = "排版完成"
                         continue
-                links = self.get_image_links(file_content)
-                if links:
-                    if 封面图序号 < len(links):
-                        cover_image_url = links[封面图序号 - 1]
+
+                if 封面图.isdigit():
+                    links = self.get_image_links(file_content)
+                    封面图序号 = int(封面图)
+                    if links:
+                        if 封面图序号 < len(links):
+                            cover_image_url = links[封面图序号 - 1]
+                        else:
+                            cover_image_url = links[-1]
+                        resp = requests.get(cover_image_url, stream=True, headers=self.header_with_ua)
+                        random.seed(dir_name)
+                        temp = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"temp{random.randint(10000, 99999999)}.jpg")
+                        with open(temp, 'wb') as f:
+                            f.write(resp.content)
+                        thumb = wechat_api.add_thumb(temp)
+                        os.remove(temp)
+                    elif not default_thumb:
+                        thumb = default_thumb = wechat_api.add_thumb(self.get_default_thumb())
                     else:
-                        cover_image_url = links[-1]
-                    resp = requests.get(cover_image_url, stream=True, headers=self.header_with_ua)
-                    random.seed(dir_name)
-                    temp = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"temp{random.randint(10000, 99999999)}.jpg")
-                    with open(temp, 'wb') as f:
-                        f.write(resp.content)
-                    thumb = wechat_api.add_thumb(temp)
-                    os.remove(temp)
+                        thumb = default_thumb
+                elif os.path.isfile(封面图) and 封面图.endswith(".txt"):
+                    with open(封面图, 'r', encoding='utf-8') as f: # type: ignore
+                        thumbs = f.readlines()
+                    thumb = random.choice(thumbs).strip()
+                elif os.path.isdir(封面图):
+                    files = os.listdir(封面图)
+                    thumb = wechat_api.add_thumb(random.choice(files))
                 elif not default_thumb:
                     thumb = default_thumb = wechat_api.add_thumb(self.get_default_thumb())
                 else:
