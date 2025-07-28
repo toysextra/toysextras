@@ -69,16 +69,20 @@ class Toy(Base, MarkdownToHtmlConverter):
         if not 排版输出目录 and not 是否存稿:
             logger.warning(f"排版输出目录和是否存稿都未开启，无法进行排版操作")
             self.result_table_view.append(["全部文章", "失败", f"排版输出目录和是否存稿都未开启，无法进行排版操作", "", ""])
+            self.is_failed = True
             return
         if not 封面图:
             logger.warning(f"封面图未设置")
             self.result_table_view.append(["全部文章", "失败", f"封面图未设置", "", ""])
+            self.is_failed = True
+            return
 
         if os.path.isdir(封面图):
             files = os.listdir(封面图)
             if not files:
                 logger.warning(f"封面图文件夹为空")
                 self.result_table_view.append(["全部文章", "失败", f"封面图文件夹为空", "", ""])
+                self.is_failed = True
                 return
 
         if 插图数量 and 插图数量.isdigit():
@@ -113,11 +117,13 @@ class Toy(Base, MarkdownToHtmlConverter):
             try:
                 wechat_api.set_access_token()
             except Exception as e:
+                self.is_failed = True
                 logger.warning(f"获取access_token失败: {e}")
                 raise ToyError("登录公众号失败，请检查网络或代理")
             公众号已设置 = not wechat_api.access_token.startswith("登录公众号失败:")
         if not 公众号已设置 and ((插图数量 and not specified_image_links) or 是否存稿):
             self.result_table_view.append(["全部文章", "失败", f"公众号登录失败，无法存稿及上传图片排版，请检查appid、secret或IP是否在白名单", "", ""])
+            self.is_failed = True
             return
         
         groups = {}
@@ -168,6 +174,7 @@ class Toy(Base, MarkdownToHtmlConverter):
                 if file_ext not in [".txt", ".html", ".md"]:
                     line[1] = "失败"
                     line[2] = f"txt、html、md文件"
+                    self.is_failed = True
                     continue
                 file_content = self.read_file(file)
                 if file_ext == ".md" or (file_ext == ".txt" and not any(tag in file_content for tag in ["<span", "<p", "<img"])):
@@ -176,6 +183,7 @@ class Toy(Base, MarkdownToHtmlConverter):
                         logger.warning(f"没有找到模板文件")
                         line[1] = "失败"
                         line[2] = f"没有找到模板文件"
+                        self.is_failed = True
                         return
                     if 插图数量 != 0:
                         # 查找md同目录下的图片文件
@@ -261,6 +269,7 @@ class Toy(Base, MarkdownToHtmlConverter):
                     if "errmsg" in res:
                         save_draft_status = "失败"
                         save_draft_msg = f"保存草稿失败:{res['errmsg']}"
+                        self.is_failed = True
                     else:
                         save_draft_status = "存稿成功"
                     if 多篇合一:
@@ -298,6 +307,7 @@ class Toy(Base, MarkdownToHtmlConverter):
             except Exception as e:
                 line[1] = "失败"
                 line[2] = f"{e}"
+                self.is_failed = True
                 logger.exception(f"处理文件{line[0]}失败", exc_info=e)
             finally:
                 if line[4] != last_main_article:
