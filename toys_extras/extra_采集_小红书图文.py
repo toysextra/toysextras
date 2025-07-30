@@ -7,7 +7,7 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 
 
 class Toy(BaseWeb):
@@ -36,12 +36,20 @@ class Toy(BaseWeb):
             content += locator.text_content()
         return content
 
-    def download_pictures(self, article_dir: str):
+    def download_pictures(self, article_dir: str, 图片下载隔间: int):
         image_index = 1
         try:
             self.page.locator(".swiper-slide-active[data-swiper-slide-index]").last.wait_for(timeout=10000)
         except TimeoutError:
             pass
+
+        图片下载隔间_max = 图片下载隔间 * 1000
+        if 图片下载隔间_max < 1000:
+            图片下载隔间_max = 1000
+            图片下载隔间_min = 500
+        else:
+            图片下载隔间_min = 图片下载隔间_max - 500
+
         image_locator = self.page.locator("div[data-swiper-slide-index]:not(.swiper-slide-duplicate)").locator("img")
         for locator in image_locator.all():
             image_url = locator.get_attribute("src")
@@ -55,15 +63,25 @@ class Toy(BaseWeb):
                     image.convert("RGB")
                     image.save(img_file_path)
                     image_index += 1
-            self.page.wait_for_timeout(random.randint(500, 1500))
+            self.page.wait_for_timeout(random.randint(图片下载隔间_min, 图片下载隔间_max))
         return image_index
 
     def play(self):
         笔记链接 = self.config.get("扩展", "文章链接")
         存储目录 = self.config.get("扩展", "存储目录")
         保留话题 = True if self.config.get("扩展", "保留话题 -- 填是或否，是则采集时保留笔记中#话题") == "是" else False
+        文章间隔 = self.config.get("扩展", "文章间隔 -- 填数字，单位秒，表示爬取间隔")
+        图片下载间隔 = self.config.get("扩展", "图片下载间隔 -- 填数字，单位秒，表示图片下载间隔")
         if not 笔记链接 and not self.files:
             return
+        if not 文章间隔 or not 文章间隔.isdigit():
+            文章间隔 = 3
+        else:
+            文章间隔 = int(文章间隔)
+        if not 图片下载间隔 or not 图片下载间隔.isdigit():
+            图片下载间隔 = 2
+        else:
+            图片下载间隔 = int(图片下载间隔)
         urls = []
         if 笔记链接:
             urls.append(笔记链接)
@@ -87,11 +105,12 @@ class Toy(BaseWeb):
                 os.makedirs(os.path.join(存储目录, file_title), exist_ok=True)
                 with open(os.path.join(存储目录, file_title, f"{file_title}.txt"), "w", encoding="utf-8") as f:
                     f.write(f"标题:{title}\n内容:\n{content}")
-                self.download_pictures(os.path.join(存储目录, file_title))
+                self.download_pictures(os.path.join(存储目录, file_title), 图片下载间隔)
                 self.result_table_view.append([url, "成功", ""])
                 self.page.wait_for_timeout(random.randint(1000, 3000))
             except Exception as e:
                 logger.exception(e, exc_info=True)
                 self.result_table_view.append([url, "失败", ""])
-                continue
+            finally:
+                self.page.wait_for_timeout(文章间隔 * 1000)
         self.page.close()
