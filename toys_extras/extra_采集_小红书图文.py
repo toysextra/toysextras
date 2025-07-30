@@ -70,8 +70,8 @@ class Toy(BaseWeb):
         笔记链接 = self.config.get("扩展", "文章链接")
         存储目录 = self.config.get("扩展", "存储目录")
         保留话题 = True if self.config.get("扩展", "保留话题 -- 填是或否，是则采集时保留笔记中#话题") == "是" else False
-        文章间隔 = self.config.get("扩展", "文章间隔 -- 填数字，单位秒，表示爬取间隔")
-        图片下载间隔 = self.config.get("扩展", "图片下载间隔 -- 填数字，单位秒，表示图片下载间隔")
+        文章间隔 = self.config.get("扩展", "文章间隔 -- 填数字，单位秒，表示两篇笔记之间的时间间隔")
+        图片下载间隔 = self.config.get("扩展", "图片下载间隔 -- 填数字，单位秒")
         if not 笔记链接 and not self.files:
             return
         if not 文章间隔 or not 文章间隔.isdigit():
