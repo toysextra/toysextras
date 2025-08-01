@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.0.9"
+__version__ = "1.1.0"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -31,15 +31,39 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 内容管理.click()
             self.upload_image_client.locator(".weui-desktop-menu__name", has_text="素材库").click()
 
+        # 等待页面加载完成
+        upload_btn_locator = self.upload_image_client.locator(".weui-desktop-upload_global-media")
+        upload_btn_locator.wait_for(state="visible")
+
+        image_locator = self.upload_image_client.locator("li[class*=weui-desktop-img-picker]").first
+        if image_locator.is_visible():
+            background_style = image_locator.locator('[role="img"]').get_attribute("style")
+            current_image_link = background_style.split('url("')[1].split('")')[0]
+        else:
+            current_image_link = ""
+
         with self.upload_image_client.expect_response(lambda response: "/cgi-bin/filetransfer" in response.url) as response:
             with self.upload_image_client.expect_file_chooser() as fc:
-                self.upload_image_client.locator(".weui-desktop-upload_global-media").click()
+                upload_btn_locator.click()
             fc = fc.value
             fc.set_files([image_path])
         response = response.value
-        image_link = response.json()["cdn_url"].replace('\\', '')
-        self.upload_image_client.locator(".weui-desktop-block__title", has_text="素材库").wait_for()
-        return image_link
+        try:
+            url = response.json()["cdn_url"].replace('\\', '')
+            self.upload_image_client.locator(".weui-desktop-block__title", has_text="素材库").wait_for(state="visible")
+            return url
+        except:
+            logger.info("通过Response获取图片链接失败，尝试通过网页获取图片链接")
+
+        for i in range(30):
+            self.upload_image_client.locator(".weui-desktop-block__title", has_text="素材库").wait_for(state="visible")
+            image_locator = self.upload_image_client.locator("li[class*=weui-desktop-img-picker]").first
+            image_locator.wait_for(state="visible")
+            background_style = image_locator.locator('[role="img"]').get_attribute("style")
+            image_link = background_style.split("url('")[1].split("')")[0]
+            if image_link!= current_image_link:
+                return image_link
+            self.random_wait(1000, 1500)
 
     def play(self):
 
@@ -62,6 +86,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         留言开关 = True if self.config.get("扩展", "留言开关 -- 填写开启或者不开启") == "开启" else False
         封面图 = self.config.get("扩展", "封面图 -- 可填序号或文件夹，如填序号则从1开始，注意排版引导图片也包括在内")
         合集 = self.config.get("扩展", "合集")
+        原文链接 = self.config.get("扩展", "原文链接")
         创作来源 = self.config.get("扩展", "创作来源")
         平台推荐 = self.config.get("扩展", "平台推荐")
         指定图片链接 = self.config.get("扩展", "指定图片链接 -- 包含图片链接的txt文件，每行一个，不填则使用md文件同目录图片")
@@ -146,7 +171,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
             if groups:
                 for group_dir, files in groups.items():
                     files = natsorted(list(files))
-                    main_article = os.path.basename(files[0])
+                    main_article = f"{os.path.basename(files[0])}_{random.randint(1000, 99999)}"
                     for file in files:
                         file_name = os.path.basename(file)
                         self.result_table_view.append([file_name, "待处理", "", file, main_article])
@@ -171,6 +196,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
             dir_name = os.path.dirname(file)
             file_name_without_ext, file_ext = os.path.splitext(os.path.basename(file))
             if file_ext not in ['.docx', '.doc', ".txt", ".html", ".md"]:
+                self.is_failed = True
                 line[1] = "失败"
                 line[2] = f"仅支持docx、doc、txt、html、md文件"
                 continue
@@ -259,6 +285,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                     popup.locator("#author").fill(作者)
                 if 封面图:
                     if not os.path.exists(封面图) and not 封面图.isdigit():
+                        self.is_failed = True
                         logger.warning(f"封面图 {封面图} 不存在")
                         line[1] = "失败"
                         line[2] = f"封面图 {封面图} 不存在"
@@ -266,7 +293,14 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                     popup.locator(".select-cover__btn").click()
                     self.random_wait()
                     if 封面图.isdigit():
-                        popup.locator("li", has_text="从正文选择").locator("visible=true").click()
+                        for i in range(10):
+                            try:
+                                popup.locator(".select-cover__btn").click(timeout=3_000)
+                                popup.locator("li", has_text="从正文选择").locator("visible=true").click(timeout=3_000)
+                                break
+                            except:
+                                self.random_wait(1000, 2000)
+                                continue
                         popup.locator(".appmsg_content_img_item").nth(int(封面图) - 1).click()
                     else:
                         if os.path.isdir(封面图):
@@ -275,7 +309,14 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                             cover_image = random.choice(cover_images)
                         else:
                             cover_image = 封面图
-                        popup.locator("li", has_text="从图片库选择").locator("visible=true").last.click()
+                        for i in range(10):
+                            try:
+                                popup.locator(".select-cover__btn").click(timeout=3_000)
+                                popup.locator("li", has_text="从图片库选择").locator("visible=true").last.click(timeout=3_000)
+                                break
+                            except:
+                                self.random_wait(1000, 2000)
+                                continue
                         with popup.expect_file_chooser() as fc:
                             self.random_wait()
                             popup.locator(".js_upload_btn_container", has_text="上传文件").locator("visible=true").click()
@@ -313,6 +354,11 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                     popup.locator(".select-opt-li", has_text=合集).first.click()
                     self.random_wait()
                     popup.get_by_role("button", name="确认").click()
+                if 原文链接:
+                    popup.locator("#js_article_url_area .js_article_url_allow_click").click()
+                    popup.get_by_placeholder("输入或粘贴原文链接").fill(原文链接)
+                    popup.get_by_role('link', name='确定').locator("visible=true").click()
+                    self.random_wait(500, 1000)
                 if 创作来源 and 创作来源 != "不声明":
                     popup.locator("#js_claim_source_area .js_claim_source_desc").click()
                     popup.locator(".weui-desktop-form__check-label", has_text=创作来源).click()
@@ -340,6 +386,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                                 pass
                     except Exception as e:
                         logger.exception(e)
+                        self.is_failed = True
                         line[1] = "可能失败,请手动检查"
                         line[2] = "未识别到保存草稿成功提示"
                         continue
@@ -373,6 +420,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 else:
                     line[1] = "已编辑"
             except Exception as e:
+                self.is_failed = True
                 logger.exception(f"处理文件 {file} 失败: {e}")
                 line[1] = "失败"
                 line[2] = str(e)
