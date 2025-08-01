@@ -150,8 +150,8 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
             if page_home.locator("a", has_text="登录").is_visible():
                 page_home.locator("a", has_text="登录").click()
 
-        groups = {}
         if 多篇合一:
+            groups = {}
             for file in self.files:
                 file_path = Path(file)
                 relative_path = file_path.relative_to(base_dir)
@@ -213,7 +213,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                             popup.locator(".weui-desktop-dialog__close-btn").locator("visible=true").first.click()
                         popup.locator("#js_add_appmsg").click()
                         self.random_wait(200, 400)
-                        popup.locator('.js_create_article[title="写新图文"]').click()
+                        popup.locator('.js_create_article[title="写新图文"]').evaluate("element => element.click()")
                     self.random_wait()
                     popup.locator("#js_import_file").click()
                     self.random_wait()
@@ -265,9 +265,11 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         popup = popup_info.value
                     else:
                         popup.bring_to_front()
+                        if popup.locator(".weui-desktop-dialog").locator("visible=true").first.is_visible():
+                            popup.locator(".weui-desktop-dialog__close-btn").locator("visible=true").first.click()
                         popup.locator("#js_add_appmsg").click()
                         self.random_wait(200, 400)
-                        popup.locator('.js_create_article[title="写新图文"]').click()
+                        popup.locator('.js_create_article[title="写新图文"]').evaluate("element => element.click()")
                     self.random_wait()
                     popup.locator("div[contenteditable=true]:visible").evaluate(
                         "(element, html) => { element.innerHTML = html }",
@@ -292,15 +294,9 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         continue
                     popup.locator(".select-cover__btn").click()
                     self.random_wait()
+                    popup.locator(".select-cover__btn").click(timeout=10_000)
                     if 封面图.isdigit():
-                        for i in range(10):
-                            try:
-                                popup.locator(".select-cover__btn").click(timeout=3_000)
-                                popup.locator("li", has_text="从正文选择").locator("visible=true").click(timeout=3_000)
-                                break
-                            except:
-                                self.random_wait(1000, 2000)
-                                continue
+                        popup.locator(".js_cover_preview_new .js_selectCoverFromContent").evaluate("element => element.click()")
                         popup.locator(".appmsg_content_img_item").nth(int(封面图) - 1).click()
                     else:
                         if os.path.isdir(封面图):
@@ -309,14 +305,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                             cover_image = random.choice(cover_images)
                         else:
                             cover_image = 封面图
-                        for i in range(10):
-                            try:
-                                popup.locator(".select-cover__btn").click(timeout=3_000)
-                                popup.locator("li", has_text="从图片库选择").locator("visible=true").last.click(timeout=3_000)
-                                break
-                            except:
-                                self.random_wait(1000, 2000)
-                                continue
+                        popup.locator(".js_cover_preview_new .js_imagedialog").evaluate("element => element.click()")
                         with popup.expect_file_chooser() as fc:
                             self.random_wait()
                             popup.locator(".js_upload_btn_container", has_text="上传文件").locator("visible=true").click()
@@ -400,14 +389,14 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                             parent_dirs = set(os.path.dirname(f) for f in need_to_move_files)
                             if len(parent_dirs) == 1:
                                 # 所有文件都在同一目录下
-                                if dir_name == self.file_path:
+                                if Path(dir_name).resolve() == Path(self.file_path).resolve():
                                     for f_to_move in need_to_move_files:
                                         shutil.move(f_to_move, 完成后移动文件到指定文件夹) # type: ignore
                                 else:
                                     shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, os.path.basename(dir_name)))  # type: ignore
                             else:
                                 grand_parent_dir = os.path.dirname(dir_name)
-                                if grand_parent_dir == self.file_path:
+                                if Path(grand_parent_dir).resolve() == Path(self.file_path).resolve():
                                     for f_to_move in need_to_move_files:
                                         parent_dir = os.path.dirname(f_to_move)
                                         shutil.move(parent_dir, os.path.join(完成后移动文件到指定文件夹, os.path.basename(parent_dir)))  # type: ignore
