@@ -7,17 +7,17 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.2'
+__version__ = '1.1.3'
 
 
 class Toy(BaseWeb):
 
     def __init__(self, page: Page):
         super().__init__(page)
-        self.result_table_view: list = [['文章连接', "状态", "错误信息"]]
+        self.result_table_view: list = [['文章连接', "状态", "错误信息", "保存路径"]]
 
     def get_article_title(self) -> str:
-        return self.page.locator("#detail-title").text_content()
+        return self.page.locator("#detail-title").text_content().strip()
 
     def get_article_content(self, tags: bool = False) -> str:
         content = ""
@@ -99,18 +99,18 @@ class Toy(BaseWeb):
                 title = self.get_article_title()
                 content = self.get_article_content(tags=保留话题)
                 if not title or not content:
-                    self.result_table_view.append([url, "失败", "标题或内容为空"])
+                    self.result_table_view.append([url, "失败", "标题或内容为空", ""])
                     continue
                 file_title = sanitize_filename(title)
                 os.makedirs(os.path.join(存储目录, file_title), exist_ok=True)
                 with open(os.path.join(存储目录, file_title, f"{file_title}.txt"), "w", encoding="utf-8") as f:
                     f.write(f"标题:{title}\n内容:\n{content}")
                 self.download_pictures(os.path.join(存储目录, file_title), 图片下载间隔)
-                self.result_table_view.append([url, "成功", ""])
+                self.result_table_view.append([url, "成功", "", os.path.join(存储目录, file_title)])
                 self.page.wait_for_timeout(random.randint(1000, 3000))
             except Exception as e:
                 logger.exception(e, exc_info=True)
-                self.result_table_view.append([url, "失败", ""])
+                self.result_table_view.append([url, "失败", "", ""])
             finally:
                 self.page.wait_for_timeout(文章间隔 * 1000)
         self.page.close()
