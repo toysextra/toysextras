@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.1.1"
+__version__ = "1.1.2"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -85,7 +85,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
             return True
         except Exception as e:
             self.save_draft(page, depth + 1)
-        
+
     def play(self):
 
         if not self.file_path:
@@ -339,6 +339,13 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         self.random_wait()
                     next_btn.click()
                     popup.get_by_role("button", name="确认").click()
+                    loading_cover_locator = popup.locator("#js_cover_area .weui-desktop-loading").locator("visible=true")
+                    try:
+                        loading_cover_locator.wait_for(state="attached", timeout=2_000)
+                    except Exception:
+                        ...
+                    finally:
+                        loading_cover_locator.wait_for(state="detached")
                     self.random_wait()
                 if 原创声明 and 原创声明 != "不声明":
                     popup.locator("#js_original .js_original_type").locator("visible=true").click()
