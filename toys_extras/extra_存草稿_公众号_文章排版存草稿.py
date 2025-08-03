@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.1.0"
+__version__ = "1.1.1"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -64,7 +64,28 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
             if image_link!= current_image_link:
                 return image_link
             self.random_wait(1000, 1500)
-
+        
+    def save_draft(self, page: Page, depth: int = 0):
+        if depth > 2:
+            return False
+        page.get_by_role("button", name="保存为草稿").click()
+        success_locator = page.locator("#js_save_success").get_by_text("已保存", exact=True).locator(
+            "visible=true")
+        saving_locator = page.get_by_text("已有流程保存中，请稍后再试").locator("visible=true")
+        try:
+            success_locator.or_(saving_locator).wait_for(state="attached", timeout=5000)
+            if saving_locator.is_visible():
+                page.locator(".auto_save_container").get_by_text("已保存").wait_for(timeout=30_000)
+                self.random_wait(1000, 2000)
+                page.get_by_role("button", name="保存为草稿").click()
+                try:
+                    success_locator.wait_for(state="attached", timeout=5_000)
+                except Exception as e:
+                    pass
+            return True
+        except Exception as e:
+            self.save_draft(page, depth + 1)
+        
     def play(self):
 
         if not self.file_path:
@@ -359,25 +380,10 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         (index == total_count - 1 or lines[index + 1][4] != line[4])
                 )
                 if not 多篇合一 or (多篇合一 and is_last_in_group):
-                    popup.get_by_role("button", name="保存为草稿").click()
-                    success_locator = popup.locator("#js_save_success").get_by_text("已保存", exact=True).locator(
-                        "visible=true")
-                    saving_locator = popup.get_by_text("已有流程保存中，请稍后再试").locator("visible=true")
-                    try:
-                        success_locator.or_(saving_locator).wait_for(state="attached", timeout=5000)
-                        if saving_locator.is_visible():
-                            popup.locator(".auto_save_container").get_by_text("已保存").wait_for(timeout=30_000)
-                            self.random_wait(1000, 2000)
-                            popup.get_by_role("button", name="保存为草稿").click()
-                            try:
-                                success_locator.wait_for(state="attached", timeout=5_000)
-                            except Exception as e:
-                                pass
-                    except Exception as e:
-                        logger.exception(e)
+                    if not self.save_draft(popup):
                         self.is_failed = True
                         line[1] = "可能失败,请手动检查"
-                        line[2] = "未识别到保存草稿成功提示"
+                        line[2] = "未识别到保存草稿按钮"
                         continue
                     if 多篇合一:
                         need_to_move_files = []
