@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.1.2"
+__version__ = "1.1.3"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -313,7 +313,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         line[1] = "失败"
                         line[2] = f"封面图 {封面图} 不存在"
                         continue
-                    popup.locator(".select-cover__btn").click()
+                    # popup.locator(".select-cover__btn").click()
                     self.random_wait()
                     popup.locator(".select-cover__btn").click(timeout=10_000)
                     if 封面图.isdigit():
