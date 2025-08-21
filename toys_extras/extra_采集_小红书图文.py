@@ -1,4 +1,5 @@
 import os
+import re
 from toys_extras.base_web import BaseWeb
 from toys_utils import sanitize_filename
 from toys_logger import logger
@@ -7,7 +8,7 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.3'
+__version__ = '1.1.4'
 
 
 class Toy(BaseWeb):
@@ -15,6 +16,7 @@ class Toy(BaseWeb):
     def __init__(self, page: Page):
         super().__init__(page)
         self.result_table_view: list = [['文章连接', "状态", "错误信息", "保存路径"]]
+        self.patten = re.compile(r"https?:\/\/sns-webpic-qc\.xhscdn\.com\/\d+\/[0-9a-z]+\/(\S+)!")
 
     def get_article_title(self) -> str:
         return self.page.locator("#detail-title").text_content().strip()
@@ -53,6 +55,10 @@ class Toy(BaseWeb):
         image_locator = self.page.locator("div[data-swiper-slide-index]:not(.swiper-slide-duplicate)").locator("img")
         for locator in image_locator.all():
             image_url = locator.get_attribute("src")
+            match = self.patten.search(image_url)
+            if not match:
+                continue
+            image_url = f"https://ci.xiaohongshu.com/{match.group(1)}?imageView2/format/png"
             if image_url:
                 response = self.page.request.get(image_url)
                 if response.status == 200:
@@ -60,7 +66,8 @@ class Toy(BaseWeb):
                     image = Image.open(BytesIO(resource_picture))
                     image_type = "gif" if image.format.lower() == "gif" else "jpg"
                     img_file_path = os.path.join(article_dir, f"图{image_index}.{image_type}")
-                    image.convert("RGB")
+                    if image.mode != 'RGB':
+                        image = image.convert('RGB')
                     image.save(img_file_path)
                     image_index += 1
             self.page.wait_for_timeout(random.randint(图片下载隔间_min, 图片下载隔间_max))
