@@ -25,16 +25,17 @@ class Toy(BaseWeb):
         excel作者主页地址列标题名 = self.config.get("扩展", "excel作者主页地址列标题名")
         if not 作者主页地址 and not self.files:
             return
-        urls = []
+        urls = set()
         if 作者主页地址:
-            urls.append(作者主页地址)
+            urls.add(作者主页地址)
         for file in self.files:
             if not file.endswith(('.xlsx', 'txt')):
                 continue
             if file.endswith('.txt'):
                 with open(file, 'r', encoding='utf-8') as f:
                     lines = f.read().splitlines()
-                    urls.append(lines)
+                for line in lines:
+                    urls.add(line.strip())
                 continue
             else:
                 workbook = openpyxl.load_workbook(file)
@@ -51,7 +52,7 @@ class Toy(BaseWeb):
                         url = url_cell.hyperlink.target
                     else:
                         url = url_cell.value
-                    urls.append(url)
+                    urls.add(url.strip())
         if not 发布日期:
             logger.info("发布日期未设置，不进行采集")
             return
