@@ -5,7 +5,7 @@ from toys_logger import logger
 from datetime import datetime, timedelta
 import os
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 
 class Toy(BaseWeb):
@@ -29,23 +29,29 @@ class Toy(BaseWeb):
         if 作者主页地址:
             urls.append(作者主页地址)
         for file in self.files:
-            if not file.endswith('.xlsx'):
+            if not file.endswith(('.xlsx', 'txt')):
                 continue
-            workbook = openpyxl.load_workbook(file)
-            sheet = workbook.active
-            headers = next(sheet.iter_rows(values_only=True))
-            try:
-                url_index = headers.index(excel作者主页地址列标题名)
-            except ValueError:
-                logger.error(f"excel文件{file}中没有找到{excel作者主页地址列标题名}列")
+            if file.endswith('.txt'):
+                with open(file, 'r', encoding='utf-8') as f:
+                    lines = f.read().splitlines()
+                    urls.append(lines)
                 continue
-            for row in sheet.iter_rows(min_row=2):
-                url_cell = row[url_index]
-                if url_cell.hyperlink:
-                    url = url_cell.hyperlink.target
-                else:
-                    url = url_cell.value
-                urls.append(url)
+            else:
+                workbook = openpyxl.load_workbook(file)
+                sheet = workbook.active
+                headers = next(sheet.iter_rows(values_only=True))
+                try:
+                    url_index = headers.index(excel作者主页地址列标题名)
+                except ValueError:
+                    logger.error(f"excel文件{file}中没有找到{excel作者主页地址列标题名}列")
+                    continue
+                for row in sheet.iter_rows(min_row=2):
+                    url_cell = row[url_index]
+                    if url_cell.hyperlink:
+                        url = url_cell.hyperlink.target
+                    else:
+                        url = url_cell.value
+                    urls.append(url)
         if not 发布日期:
             logger.info("发布日期未设置，不进行采集")
             return
