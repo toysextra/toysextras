@@ -9,7 +9,7 @@ from natsort import natsorted
 from pathlib import Path
 
 
-__version__ = "1.1.3"
+__version__ = "1.1.4"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -359,9 +359,8 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         self.random_wait()
                     popup.get_by_role("button", name="确定").click()
                     self.random_wait()
-                if not 留言开关:
+                if 留言开关:
                     popup.locator("#js_comment_and_fansmsg_area").click()
-                    popup.locator(".weui-desktop-form__check-label", has_text="不开启").locator("visible=true").click()
                     self.random_wait()
                     popup.get_by_role("button", name="确定").click()
                     self.random_wait()
