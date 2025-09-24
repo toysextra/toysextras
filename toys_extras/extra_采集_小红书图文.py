@@ -8,7 +8,7 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.4'
+__version__ = '1.1.5'
 
 
 class Toy(BaseWeb):
@@ -60,7 +60,7 @@ class Toy(BaseWeb):
                 continue
             image_url = f"https://ci.xiaohongshu.com/{match.group(1)}?imageView2/format/png"
             if image_url:
-                response = self.page.request.get(image_url)
+                response = self.page.request.get(image_url, ignore_https_errors=True)
                 if response.status == 200:
                     resource_picture = response.body()
                     image = Image.open(BytesIO(resource_picture))
