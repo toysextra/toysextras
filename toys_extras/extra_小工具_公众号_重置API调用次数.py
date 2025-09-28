@@ -1,5 +1,5 @@
 import requests
-from base import Base
+from toys_extras.base import Base
 
 __version__ = "1.0.0"
 
