@@ -4,7 +4,7 @@ from toys_logger import logger
 from datetime import datetime, timedelta
 import os
 
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 
 class Toy(BaseWeb):
 
@@ -62,7 +62,7 @@ class Toy(BaseWeb):
                 # 上传文档
                 self.hove_导入文档.click()
                 self.random_wait(500, 1000)
-                self.button_导入文档.click()
+                self.button_导入文档.evaluate("(el) => el.click()")
                 self.random_wait(500, 1000)
                 
                 with self.page.expect_file_chooser() as fc_info:
@@ -95,7 +95,8 @@ class Toy(BaseWeb):
                         self.封面设置.locator(".cheetah-radio-wrapper", has_text="三图").locator("input").click()
                     else:
                         self.封面设置.locator(".cheetah-radio-wrapper", has_text="单图").locator("input").click()
-                    self.page.locator('.cheetah-form-item-control-input', has_text="选择封面").locator("visible=true").first.click()
+                        self.random_wait(1000, 1500)
+                    self.page.locator('.cheetah-form-item-control-input .coverUploaderView', has_text="选择封面").locator("visible=true").first.click()
 
                     image_locator = self.page.locator("div.cheetah-modal-content .image")
                     image_locator.first.wait_for(state="visible", timeout=30_000)
@@ -177,3 +178,5 @@ class Toy(BaseWeb):
                 row[1] = "失败"
                 row[2] = str(e)
                 self.is_failed = True
+        if not self.page.is_closed():
+            self.page.close()
