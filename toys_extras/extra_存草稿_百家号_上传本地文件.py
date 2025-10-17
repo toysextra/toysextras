@@ -4,7 +4,7 @@ from toys_logger import logger
 from datetime import datetime, timedelta
 import os
 
-__version__ = "1.0.3"
+__version__ = "1.0.4"
 
 class Toy(BaseWeb):
 
@@ -52,6 +52,15 @@ class Toy(BaseWeb):
                 logger.warning(f"仅支持上传格式docx的word文档：{file}")
                 continue
             self.result_table_view.append([file, "", "", ""])
+
+        def handler():
+            self.page.locator(".cheetah-popconfirm-message .l-icon-BjhBasicGuanbi svg").click()
+
+        self.page.add_locator_handler(
+            self.page.get_by_text("如您发布的内容涉及公共政策和时事，请注明引用来源、事件时间及地点。"),
+            handler
+        )
+
         for row in self.result_table_view[1:]:
             article_url = ""
             file = row[0]
