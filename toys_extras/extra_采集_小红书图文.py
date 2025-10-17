@@ -8,7 +8,7 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.5'
+__version__ = '1.1.6'
 
 
 class Toy(BaseWeb):
@@ -17,14 +17,16 @@ class Toy(BaseWeb):
         super().__init__(page)
         self.result_table_view: list = [['文章连接', "状态", "错误信息", "保存路径"]]
         self.patten = re.compile(r"https?:\/\/sns-webpic-qc\.xhscdn\.com\/\d+\/[0-9a-z]+\/(\S+)!")
+        self.title_locator = self.page.locator("#detail-title")
+        self.content_locator = self.page.locator("#detail-desc .note-text")
 
     def get_article_title(self) -> str:
-        return self.page.locator("#detail-title").text_content().strip()
+        return self.title_locator.text_content(timeout=2_000).strip()
 
     def get_article_content(self, tags: bool = False) -> str:
         content = ""
-        detail_locators =self.page.locator("#detail-desc .note-text").locator("xpath=/*")
-        try:
+        detail_locators = self.content_locator.locator("xpath=/*")
+        try:    
             detail_locators.last.wait_for()
         except TimeoutError:
             pass
@@ -103,6 +105,7 @@ class Toy(BaseWeb):
         for url in urls:
             try:
                 self.page.goto(url)
+                self.title_locator.or_(self.content_locator).wait_for()
                 title = self.get_article_title()
                 content = self.get_article_content(tags=保留话题)
                 if not title or not content:
