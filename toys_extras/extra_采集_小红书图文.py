@@ -8,7 +8,7 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.6'
+__version__ = '1.1.7'
 
 
 class Toy(BaseWeb):
@@ -105,7 +105,7 @@ class Toy(BaseWeb):
         for url in urls:
             try:
                 self.page.goto(url)
-                self.title_locator.or_(self.content_locator).wait_for()
+                self.title_locator.or_(self.content_locator).last.wait_for()
                 title = self.get_article_title()
                 content = self.get_article_content(tags=保留话题)
                 if not title or not content:
