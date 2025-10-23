@@ -9,7 +9,7 @@ import random
 import shutil
 import requests
 
-__version__ = "1.1.7"
+__version__ = "1.1.8"
 
 
 class Toy(Base, MarkdownToHtmlConverter):
@@ -53,6 +53,9 @@ class Toy(Base, MarkdownToHtmlConverter):
         appid = self.config.get("扩展", "appid")
         secret = self.config.get("扩展", "secret")
         作者 = self.config.get("扩展", "作者")
+        原文链接 = self.config.get("扩展", "原文链接")
+        留言开关 = True if self.config.get("扩展", "留言开关") == "是" else False
+        是否粉丝才可留言 = True if self.config.get("扩展", "是否粉丝才可留言") == "是" else False
         封面图 = self.config.get("扩展", "封面图 -- 可填序号或文件夹或包含素材id的txt文件，如填序号则从1开始，注意排版引导图片也包括在内")
         指定图片链接 = self.config.get("扩展", "指定图片链接 -- 包含图片链接的txt文件，每行一个，不填则使用md文件同目录图片")
         插图数量 = self.config.get("扩展", "插图数量")
@@ -147,7 +150,7 @@ class Toy(Base, MarkdownToHtmlConverter):
             if groups:
                 for group_dir, files in groups.items():
                     files = natsorted(list(files))
-                    main_article = os.path.basename(files[0])
+                    main_article = f"{os.path.basename(files[0])}_{random.randint(1000, 99999)}"
                     for file in files:
                         file_name = os.path.basename(file)
                         self.result_table_view.append([file_name, "待处理", "", file, main_article])
@@ -256,6 +259,12 @@ class Toy(Base, MarkdownToHtmlConverter):
                 }
                 if 作者:
                     article["author"] = 作者
+                if 原文链接:
+                    article["content_source_url"] = 原文链接
+                if 留言开关:
+                    article["need_open_comment"] = 留言开关
+                if 是否粉丝才可留言:
+                    article["only_fans_can_comment"] = 是否粉丝才可留言
 
                 articles.append(article)
 
