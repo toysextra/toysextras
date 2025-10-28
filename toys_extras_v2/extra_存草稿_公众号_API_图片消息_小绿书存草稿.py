@@ -5,7 +5,7 @@ import os
 import shutil
 from natsort import natsorted
 
-__version__ = "1.0.4"
+__version__ = "1.0.5"
 
 
 class Toy(Base):
@@ -95,4 +95,5 @@ class Toy(Base):
             self.result_table_view.append([title, "成功", ""])
             if 存稿后移动文件到指定文件夹:
                 shutil.move(dir_path, os.path.join(存稿后移动文件到指定文件夹, os.path.basename(dir_path))) # type: ignore
+
 
