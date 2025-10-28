@@ -6,7 +6,7 @@ import random
 import shutil
 from natsort import natsorted
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 
 class Toy(Base, MarkdownToHtmlConverter):
@@ -127,4 +127,5 @@ class Toy(Base, MarkdownToHtmlConverter):
                 self.result_table_view.append([dir_name, "成功", ""])
             if 完成后移动文件到指定文件夹:
                 shutil.move(dir_name, os.path.join(完成后移动文件到指定文件夹, dir_name))  # type: ignore
+
 
