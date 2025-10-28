@@ -8,7 +8,7 @@ import requests
 import os
 import re
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 
 class Toy(BaseWeb):
@@ -175,4 +175,5 @@ class Toy(BaseWeb):
         sheet.append(self.result_table_view[0])
         for row in collect_articles:
             sheet.append(row)
+
         workbook.save(filepath)
