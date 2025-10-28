@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 
-__version__ = "1.1.4"
+__version__ = "1.1.5"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -460,4 +460,5 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         if page_home is not None:
             page_home.close()
         self.page.close()
+
 
