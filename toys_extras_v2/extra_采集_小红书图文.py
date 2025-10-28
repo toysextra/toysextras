@@ -8,7 +8,7 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 
 
 class Toy(BaseWeb):
@@ -123,4 +123,5 @@ class Toy(BaseWeb):
                 self.result_table_view.append([url, "失败", "", ""])
             finally:
                 self.page.wait_for_timeout(文章间隔 * 1000)
+
         self.page.close()
