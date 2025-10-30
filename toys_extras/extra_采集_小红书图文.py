@@ -8,7 +8,7 @@ import random
 from PIL import Image
 from io import BytesIO
 
-__version__ = '1.1.7'
+__version__ = '1.1.8'
 
 
 class Toy(BaseWeb):
@@ -112,11 +112,17 @@ class Toy(BaseWeb):
                     self.result_table_view.append([url, "失败", "标题或内容为空", ""])
                     continue
                 file_title = sanitize_filename(title)
-                os.makedirs(os.path.join(存储目录, file_title), exist_ok=True)
-                with open(os.path.join(存储目录, file_title, f"{file_title}.txt"), "w", encoding="utf-8") as f:
+                # 检查文件标题是否已存在，如果存在则添加序号
+                folder_title = file_title
+                counter = 1
+                while os.path.exists(os.path.join(存储目录, folder_title)):
+                    folder_title = f"{file_title}（{counter}）"
+                    counter += 1
+                os.makedirs(os.path.join(存储目录, folder_title), exist_ok=True)
+                with open(os.path.join(存储目录, folder_title, f"{file_title}.txt"), "w", encoding="utf-8") as f:
                     f.write(f"标题:{title}\n内容:\n{content}")
-                self.download_pictures(os.path.join(存储目录, file_title), 图片下载间隔)
-                self.result_table_view.append([url, "成功", "", os.path.join(存储目录, file_title)])
+                self.download_pictures(os.path.join(存储目录, folder_title), 图片下载间隔)
+                self.result_table_view.append([url, "成功", "", os.path.join(存储目录, folder_title)])
                 self.page.wait_for_timeout(random.randint(1000, 3000))
             except Exception as e:
                 logger.exception(e, exc_info=True)
