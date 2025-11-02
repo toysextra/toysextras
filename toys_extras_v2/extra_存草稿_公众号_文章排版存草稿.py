@@ -112,6 +112,10 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         合集 = self.config.get("扩展", "合集")
         原文链接 = self.config.get("扩展", "原文链接")
         创作来源 = self.config.get("扩展", "创作来源")
+        素材来源 = self.config.get("扩展", "素材来源")
+        来源平台 = self.config.get("扩展", "来源账号/平台")
+        事件时间 = self.config.get("扩展", "事件时间")
+        事件地点 = self.config.get("扩展", "事件地点")
         平台推荐 = self.config.get("扩展", "平台推荐")
         指定图片链接 = self.config.get("扩展", "指定图片链接 -- 包含图片链接的txt文件，每行一个，不填则使用md文件同目录图片")
         插图数量 = self.config.get("扩展", "插图数量")
@@ -122,7 +126,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         话题 = self.config.get("扩展", "话题 -- 多个话题用英文逗号隔开，使用此功能排版时生效")
         输出文件格式 = "txt" if self.config.get("扩展", "输出文件格式 -- 可填txt或html") not in ["txt", "html"] else self.config.get("扩展", "输出文件格式 -- 可填txt或html")
         排版输出目录 = self.config.get("扩展", "排版输出目录")
-        完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动文件到指定文件夹")
+        完成后移动文件到指定文件夹 = self.config.get("扩展", "完成后移动至")
 
         if 完成后移动文件到指定文件夹:
             完成后移动文件到指定文件夹 = self.make_to_move_dir(完成后移动文件到指定文件夹)
@@ -131,6 +135,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
             插图数量 = int(插图数量)
         else:
             插图数量 = 0
+        
 
         if 图片最小宽度 and 图片最小宽度.isdigit():
             图片最小宽度 = int(图片最小宽度)
@@ -155,6 +160,11 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         topics = None
         if 话题数量 or 话题:
             topics = {"type": "wx", "num": 话题数量, "tags": 话题}
+
+        if 创作来源 == "素材来源官方媒体/网络新闻" and (not 素材来源 or not 来源平台):
+            self.result_table_view.append(["所有", "失败", "素材来源官方媒体/网络新闻时，素材来源和来源账号/平台不能为空", "", ""])
+            self.is_failed = True
+            return
 
         specified_image_links = []
         if os.path.isfile(指定图片链接):
@@ -303,8 +313,10 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         for _ in range(10):
                             article_div.click()
                             copy_to_clipboard(file_content)
+                            logger.info(f"粘贴 {file_content[:10]} 到文章中")
                             popup.keyboard.press("Control+V")
                             chinese_dst = re.search(r"[\u4e00-\u9fa5]+", article_div.inner_text())
+                            logger.info(f"粘贴完成，文章内容为 {article_div.inner_text()[:10]}")
                             if chinese_dst and chinese_src and chinese_dst.group(0)[:10] not in chinese_src.group(0):
                                 article_div.clear()
                                 self.random_wait(1000, 4000)
@@ -359,7 +371,9 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                     next_btn = popup.locator(".weui-desktop-btn", has_text="下一步")
                     while "btn_disabled" in next_btn.get_attribute("class"):
                         self.random_wait()
+                    self.random_wait(1000, 2000)
                     next_btn.click()
+                    self.random_wait(1000, 2000)
                     popup.get_by_role("button", name="确认").click()
                     loading_cover_locator = popup.locator("#js_cover_area .weui-desktop-loading").locator("visible=true")
                     try:
@@ -400,6 +414,27 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 if 创作来源 and 创作来源 != "不声明":
                     popup.locator("#js_claim_source_area .js_claim_source_desc").click()
                     popup.locator(".weui-desktop-form__check-label", has_text=创作来源).click()
+                    if 创作来源 == "素材来源官方媒体/网络新闻":
+                        popup.locator(".weui-desktop-form__check-label", has_text=素材来源).click()
+                        self.random_wait(500, 1000)
+                        popup.locator(".claim-source_offcial_other input").fill(来源平台)
+                        self.random_wait(500, 1000)
+                        popup.locator(".claim-source_offcial_time input").click()
+                        popup.locator(".weui-desktop-picker__selected").click()
+                        popup.locator(".claim-source_offcial_time input").evaluate(f"element => element.value = '{事件时间}'")
+                        self.random_wait(500, 1000)
+                        popup.locator(".region-text").click()
+                        places =事件地点.split(">")
+                        for index, place in enumerate(places):
+                            place = place.strip()
+                            if index == len(places) - 1:
+                                popup.locator("div.item", has_text=place).click()
+                            else:
+                                popup.locator("div.item", has_text=place).evaluate("element => element.click()")
+                            self.random_wait(300, 500)
+                    self.random_wait(500, 1000)
+                    popup.get_by_role("button", name='确认').locator("visible=true").click()
+                    self.random_wait()
                 if 平台推荐 and 平台推荐 != "已开启":
                     popup.locator("#js_not_recommend_area .js_not_recommend_desc").click()
                     popup.locator(".weui-desktop-form__check-label[for^=not_recomment]").get_by_text(平台推荐, exact=True).click()
@@ -460,5 +495,3 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         if page_home is not None:
             page_home.close()
         self.page.close()
-
-
