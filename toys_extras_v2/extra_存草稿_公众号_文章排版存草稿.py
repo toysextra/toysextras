@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 
-__version__ = "1.1.5"
+__version__ = "1.1.6"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -78,6 +78,10 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         try:
             success_locator.or_(saving_locator).wait_for(state="attached", timeout=5000)
             if saving_locator.is_visible():
+                try:
+                    page.locator(".auto_save_container").get_by_text("已保存").wait_for(timeout=20_000)
+                except Exception as e:
+                    pass
                 page.locator(".auto_save_container").get_by_text("已保存").wait_for(timeout=30_000)
                 self.random_wait(1000, 2000)
                 page.get_by_role("button", name="保存为草稿").click()
@@ -395,11 +399,19 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                         self.random_wait()
                     popup.get_by_role("button", name="确定").click()
                     self.random_wait()
-                if 留言开关:
+                留言已开启 = popup.locator("#js_comment_and_fansmsg_area .selected").count() > 0
+                if 留言开关 and not 留言已开启:
                     popup.locator("#js_comment_and_fansmsg_area").click()
-                    self.random_wait()
+                    self.random_wait(300, 1000)
                     popup.get_by_role("button", name="确定").click()
-                    self.random_wait()
+                    self.random_wait(300, 1000)
+                if not 留言开关 and 留言已开启:
+                    popup.locator("#js_comment_and_fansmsg_area").click()
+                    self.random_wait(300, 1000)
+                    popup.locator(".comment-switcher").first.click()
+                    self.random_wait(300, 1000)
+                    popup.get_by_role("button", name="确定").click()
+                    self.random_wait(300, 1000)
                 if 合集:
                     popup.locator("#js_article_tags_area .js_article_tags_label").click()
                     popup.get_by_placeholder("请选择合集").fill(合集)
