@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 
-__version__ = "1.1.6"
+__version__ = "1.1.7"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -251,7 +251,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                             popup.locator(".weui-desktop-dialog__close-btn").locator("visible=true").first.click()
                         popup.locator("#js_add_appmsg").click()
                         self.random_wait(200, 400)
-                        popup.locator('.js_create_article[title="写新图文"]').evaluate("element => element.click()")
+                        popup.locator('.js_create_article[title="写新文章"]').evaluate("element => element.click()")
                     self.random_wait()
                     popup.locator("#js_import_file").click()
                     self.random_wait()
