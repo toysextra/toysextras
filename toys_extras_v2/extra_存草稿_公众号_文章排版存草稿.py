@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 
-__version__ = "1.1.7"
+__version__ = "1.1.8"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -307,7 +307,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                             popup.locator(".weui-desktop-dialog__close-btn").locator("visible=true").first.click()
                         popup.locator("#js_add_appmsg").click()
                         self.random_wait(200, 400)
-                        popup.locator('.js_create_article[title="写新图文"]').evaluate("element => element.click()")
+                        popup.locator('.js_create_article[title="写新文章"]').evaluate("element => element.click()")
                     self.random_wait()
                     article_div = popup.locator("div[contenteditable=true]:visible")
                     if "<html" in file_content or "<body" in file_content or "<head" in file_content:
@@ -507,3 +507,4 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         if page_home is not None:
             page_home.close()
         self.page.close()
+
