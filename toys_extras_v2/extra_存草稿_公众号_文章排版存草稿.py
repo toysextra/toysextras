@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 
-__version__ = "1.1.8"
+__version__ = "1.1.9"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -185,8 +185,9 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
             page_home = context.new_page()
             page_home.goto(self.url)
             page_home.locator('[title="公众号"]').wait_for()
-            if page_home.locator("a", has_text="登录").is_visible():
-                page_home.locator("a", has_text="登录").click()
+            login_button = page_home.locator("a", has_text=re.compile(r"^登录$"))
+            if login_button.is_visible():
+                login_button.click()
 
         if 多篇合一:
             groups = {}
@@ -507,4 +508,3 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         if page_home is not None:
             page_home.close()
         self.page.close()
-
