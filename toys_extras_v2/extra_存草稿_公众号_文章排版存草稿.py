@@ -78,11 +78,9 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         try:
             success_locator.or_(saving_locator).wait_for(state="attached", timeout=5000)
             if saving_locator.is_visible():
-                try:
-                    page.locator(".auto_save_container").get_by_text("已保存").wait_for(timeout=20_000)
-                except Exception as e:
-                    pass
-                page.locator(".auto_save_container").get_by_text("已保存").wait_for(timeout=30_000)
+                已保存 = page.locator(".auto_save_container").get_by_text("已保存")
+                自动保存失败 = page.locator(".auto_save_container").get_by_text("自动保存失败")
+                已保存.or_(自动保存失败).wait_for(state="attached", timeout=30_000)
                 self.random_wait(1000, 2000)
                 page.get_by_role("button", name="保存为草稿").click()
                 try:
@@ -121,6 +119,7 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
         事件时间 = self.config.get("扩展", "事件时间")
         事件地点 = self.config.get("扩展", "事件地点")
         平台推荐 = self.config.get("扩展", "平台推荐")
+        文中空行 = True if self.config.get("扩展", "文中插入1个空行 -- 填写是或否", fallback="否") == "是" else False
         指定图片链接 = self.config.get("扩展", "指定图片链接 -- 包含图片链接的txt文件，每行一个，不填则使用md文件同目录图片")
         插图数量 = self.config.get("扩展", "插图数量")
         插图位置 = self.config.get("扩展", "插图位置 -- 不填时图片均匀插入文章，填写格式'1,5,7'")
@@ -343,6 +342,13 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 else:
                     title = file_name_without_ext
                 popup.get_by_placeholder("请在这里输入标题").fill(title[:64])
+
+                if 文中空行:
+                    contents_loc = popup.locator("div[contenteditable=true] p")
+                    middle_element = contents_loc.nth(len(contents_loc.all()) // 2)
+                    # 插入空行
+                    middle_element.evaluate("element => element.insertAdjacentHTML('afterend', '<br>')")
+
                 if 作者:
                     popup.locator("#author").fill(作者)
                 if 封面图:
