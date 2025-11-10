@@ -42,9 +42,9 @@ class Toy(BaseWeb):
         文章包含标题 = self.config.get("扩展", "文章包含标题")
         封面图序号 = self.config.get("扩展", "封面图序号 -- 多图用英文逗号隔开，如1,3,4")
         摘要 = self.config.get("扩展", "摘要")
-        # 分类 = self.config.get("扩展", "分类 -- 历史->考古")
-        事件来源时间 = self.config.get("扩展", "事件来源说明 -- 时间，可填格式“2023-01-01”或“今日”或“昨日”")
-        # 事件来源地点 = self.config.get("扩展", "事件来源说明 -- 地点，可填格式“河北省->北京市”")
+        分类 = self.config.get("扩展", "分类 -- 可填格式“历史->考古”", fallback="")
+        事件来源时间 = self.config.get("扩展", "事件来源说明 -- 时间，可填格式“2023-01-01”或“今日”或“昨日”", fallback="")
+        事件来源地点 = self.config.get("扩展", "事件来源说明 -- 地点，可填格式“河北省->北京市”", fallback="")
         设置选项 = self.config.get("扩展", "设置 -- 多个设置使用英文逗号隔开，如：自动生成播客,图文转动态")
         完成后移动至 = self.config.get("扩展", "完成后移动至")
         for file in self.files:
@@ -124,13 +124,12 @@ class Toy(BaseWeb):
                     self.random_wait(500, 1000)
                 
                 # 选择分类
-                # if 分类:
-                #     self.分类选择.locator(".cheetah-select-selector").click()
-                #     self.random_wait(500, 1000)
-                #     for 分类部分 in 分类.split("->"):
-                #         # scroll_into_view_if_needed()方法无效,滚动
-                #         self.page.get_by_text(分类部分).click()
-                #         self.random_wait(500, 1000)
+                if 分类:
+                    self.分类选择.locator(".cheetah-select-selector").click()
+                    self.random_wait(500, 1000)
+                    for 分类部分 in 分类.split("->"):
+                        self.page.get_by_text(分类部分).evaluate("(el) => el.click()")
+                        self.random_wait(500, 1000)
                 
                 if 事件来源时间:
                     if 事件来源时间 == "今日":
@@ -140,14 +139,12 @@ class Toy(BaseWeb):
                     self.事件来源时间.fill(事件来源时间)
                     self.random_wait(500, 1000)
                 
-                # if 事件来源地点:
-                #     事件来源地点 = 事件来源地点.split("->")[-1]
-                #     self.事件来源地点.click()
-                #     for 地点部分 in 事件来源地点.split("->"):
-                #         self.page.get_by_text(地点部分).scroll_into_view_if_needed()
-                #         self.page.get_by_text(地点部分).click()
-                #         self.random_wait(500, 1000)
-
+                if 事件来源地点:
+                    self.事件来源地点.click()
+                    for 地点部分 in 事件来源地点.split("->"):
+                        self.random_wait(500, 1000)
+                        self.page.get_by_text(地点部分).evaluate("(el) => el.click()")
+                self.random_wait(500, 1000)
                 设置选项列表 = [选项.strip() for 选项 in 设置选项.split(",") if 选项.strip()]
                 for option_loc in self.设置选项.locator(".setting-item .cheetah-checkbox-wrapper").all():
                     option_text = option_loc.inner_text().strip()
@@ -186,5 +183,4 @@ class Toy(BaseWeb):
                 row[2] = str(e)
                 self.is_failed = True
         if not self.page.is_closed():
-
             self.page.close()
