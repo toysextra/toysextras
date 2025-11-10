@@ -4,7 +4,7 @@ from toys_logger import logger
 from datetime import datetime, timedelta
 import os
 
-__version__ = "1.0.5"
+__version__ = "1.0.6"
 
 class Toy(BaseWeb):
 
@@ -184,3 +184,4 @@ class Toy(BaseWeb):
                 self.is_failed = True
         if not self.page.is_closed():
             self.page.close()
+
