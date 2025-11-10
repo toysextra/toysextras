@@ -10,7 +10,7 @@ from pathlib import Path
 import shutil
 
 
-__version__ = "1.1.9"
+__version__ = "1.2.0"
 
 
 class Toy(BaseWeb, MarkdownToHtmlConverter):
@@ -344,9 +344,10 @@ class Toy(BaseWeb, MarkdownToHtmlConverter):
                 popup.get_by_placeholder("请在这里输入标题").fill(title[:64])
 
                 if 文中空行:
-                    contents_loc = popup.locator("div[contenteditable=true] p")
+                    contents_loc = popup.locator('div[contenteditable="true"] > p,section')
                     middle_element = contents_loc.nth(len(contents_loc.all()) // 2)
                     # 插入空行
+                    print(middle_element.inner_text())
                     middle_element.evaluate("element => element.insertAdjacentHTML('afterend', '<br>')")
 
                 if 作者:
