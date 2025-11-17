@@ -3,7 +3,7 @@ from playwright.sync_api import Page
 from toys_logger import logger
 
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 
 class Toy(BaseWeb):
@@ -63,12 +63,13 @@ class Toy(BaseWeb):
                 page.locator(".account_info").click()
                 page.locator('[title="切换账号"]').click()
             page.get_by_text(current_login_account).click()
-            self.navigate_to(self.url)
+            self.navigate(self.url)
             page.locator('[title="公众号"]').wait_for()
             self.result_table_view.append([current_login_nickname, "成功", ""])
-        except:
+        except Exception as e:
             self.is_failed = True
             self.result_table_view.append([current_login_nickname, "失败", "切换回当前登录账号失败"])
+            logger.error("切换回当前登录账号失败", exc_info=True)
         finally:
             if 关闭比特窗口 and self.figure_browser:
                 self.figure_browser.close_browser()
