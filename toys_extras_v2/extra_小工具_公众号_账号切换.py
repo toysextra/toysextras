@@ -3,7 +3,7 @@ from playwright.sync_api import Page
 from toys_logger import logger
 
 
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
 
 class Toy(BaseWeb):
@@ -37,7 +37,7 @@ class Toy(BaseWeb):
         page.locator(".account_box-panel-item", has_text="切换账号").click()
 
         # 当前登录账号
-        current_login_locator = page.locator(".switch-account-dialog_section", has=page.locator(".section-item", has_text="当前登录"))
+        current_login_locator = page.locator(".switch-account-dialog_section .section-item", has_text="当前登录")
         current_login_locator.wait_for()
         current_login_account = current_login_locator.locator(".section-item__desc").first.text_content()
         current_login_nickname = current_login_locator.locator(".section-item__nickname").first.text_content()
